@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Gehölzkarte – Türkenschanzpark & BOKU Wien</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --ink:    #0e1318;
+  --paper:  #f5f0e8;
+  --moss:   #3d6b4a;
+  --sage:   #7aaa82;
+  --rust:   #8b4a2a;
+  --stone:  #8a8278;
+  --cream:  rgba(245,240,232,0.97);
+  --shadow: rgba(14,19,24,0.18);
+}
+html, body { height: 100%; background: var(--paper); color: var(--ink); font-family: 'DM Mono', monospace; overflow: hidden; }
+
+/* ── TOPBAR ─────────────────────────────────── */
+#bar {
+  position: fixed; top: 0; left: 0; right: 0; height: 52px; z-index: 1100;
+  background: var(--cream);
+  border-bottom: 1.5px solid rgba(14,19,24,0.12);
+  display: flex; align-items: center; gap: 14px; padding: 0 18px;
+  box-shadow: 0 1px 12px var(--shadow);
+}
+.logo-main { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 19px; color: var(--moss); letter-spacing: -0.3px; white-space: nowrap; }
+.logo-sub  { font-size: 8px; color: var(--stone); letter-spacing: 2.5px; text-transform: uppercase; white-space: nowrap; }
+.sep { width: 1px; height: 24px; background: rgba(14,19,24,0.1); flex-shrink: 0; }
+
+/* search */
+#sbox { position: relative; width: 190px; flex-shrink: 0; }
+#sinput {
+  width: 100%; background: rgba(14,19,24,0.06); border: 1px solid rgba(14,19,24,0.14);
+  border-radius: 6px; padding: 5px 9px 5px 26px;
+  color: var(--ink); font-size: 11px; font-family: 'DM Mono', monospace;
+}
+#sinput::placeholder { color: var(--stone); }
+#sinput:focus { outline: none; border-color: var(--moss); background: rgba(61,107,74,0.05); }
+.sico { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 11px; color: var(--stone); pointer-events: none; }
+#sdrop {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+  background: var(--cream); border: 1px solid rgba(14,19,24,0.15);
+  border-radius: 8px; z-index: 3000; max-height: 210px; overflow-y: auto; display: none;
+  box-shadow: 0 6px 24px var(--shadow);
+}
+.sdi { padding: 7px 11px; cursor: pointer; border-bottom: 1px solid rgba(14,19,24,0.06); }
+.sdi:hover { background: rgba(61,107,74,0.07); }
+.sdi-lat { font-size: 12px; font-style: italic; color: var(--ink); font-family: 'Cormorant Garamond', serif; }
+.sdi-de  { font-size: 9px; color: var(--stone); margin-top: 1px; }
+
+/* filter buttons */
+.fbtn {
+  background: transparent; border: 1px solid rgba(14,19,24,0.14);
+  color: var(--stone); border-radius: 5px; padding: 4px 10px;
+  font-size: 9px; cursor: pointer; font-family: 'DM Mono', monospace;
+  letter-spacing: 0.5px; text-transform: uppercase; transition: all .15s; white-space: nowrap;
+}
+.fbtn.on { background: var(--moss); border-color: var(--moss); color: #fff; }
+#cnt { margin-left: auto; font-size: 9px; color: var(--stone); white-space: nowrap; flex-shrink: 0; letter-spacing: 0.5px; }
+#cnt b { color: var(--moss); }
+
+/* ── MAP ─────────────────────────────────────── */
+#map { position: fixed; top: 52px; left: 0; right: 0; bottom: 0; z-index: 1; }
+.leaflet-tile { filter: sepia(0.25) saturate(0.75) brightness(0.95); }
+.leaflet-control-zoom a { background: var(--cream) !important; color: var(--ink) !important; border-color: rgba(14,19,24,0.15) !important; font-family: 'DM Mono', monospace !important; }
+.leaflet-control-attribution { background: rgba(245,240,232,0.85) !important; color: var(--stone) !important; font-size: 8px !important; }
+
+/* ── POPUP ───────────────────────────────────── */
+.leaflet-popup-content-wrapper {
+  background: var(--cream) !important;
+  border: 1.5px solid rgba(14,19,24,0.13) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 36px var(--shadow) !important;
+  padding: 0 !important;
+  min-width: 240px; max-width: 268px;
+}
+.leaflet-popup-tip-container { display: none; }
+.leaflet-popup-content { margin: 0 !important; width: auto !important; }
+.leaflet-popup-close-button { color: var(--stone) !important; font-size: 18px !important; top: 9px !important; right: 10px !important; }
+
+.tpop { padding: 14px 15px 13px; }
+.tpop-src  { font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: var(--stone); margin-bottom: 2px; }
+.tpop-lat  { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 18px; color: var(--ink); line-height: 1.2; padding-right: 20px; }
+.tpop-de   { font-family: 'Cormorant Garamond', serif; font-size: 13px; color: var(--moss); margin: 3px 0 10px; }
+.tpop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 9px; }
+.tpoc      { background: rgba(14,19,24,0.05); border-radius: 5px; padding: 6px 8px; }
+.tocl      { font-size: 7px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--stone); margin-bottom: 2px; }
+.tocv      { font-size: 11px; color: var(--ink); }
+.tpop-addr { font-size: 9px; color: var(--stone); margin-bottom: 2px; }
+.tpop-img  { width: 100%; height: 120px; object-fit: cover; border-radius: 7px; display: block; margin-bottom: 9px; }
+.tpop-nophoto {
+  width: 100%; height: 80px; background: rgba(14,19,24,0.04);
+  border: 1px dashed rgba(14,19,24,0.1); border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; color: var(--stone); margin-bottom: 9px;
+}
+.tpop-photo-src {
+  position: absolute; bottom: 14px; right: 7px;
+  background: rgba(14,19,24,0.55); border-radius: 3px;
+  padding: 2px 5px; font-size: 7px; color: rgba(245,240,232,0.8);
+}
+
+/* ── TREE MARKER ────────────────────────────── */
+.tdot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--moss);
+  border: 1.5px solid rgba(255,255,255,0.8);
+  cursor: pointer;
+  transition: transform 0.12s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+}
+.tdot:hover { transform: scale(1.9); }
+.tdot.sel {
+  background: var(--rust); border-color: white;
+  transform: scale(2.2);
+  box-shadow: 0 0 0 3px rgba(139,74,42,0.25), 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* ── STATUS ─────────────────────────────────── */
+#status {
+  position: fixed; bottom: 14px; left: 14px; z-index: 800;
+  background: var(--cream); border: 1px solid rgba(14,19,24,0.12);
+  border-radius: 7px; padding: 5px 12px; display: flex; align-items: center; gap: 7px;
+  box-shadow: 0 2px 12px var(--shadow);
+}
+.pdot { width: 6px; height: 6px; border-radius: 50%; background: var(--moss); animation: pd 2.2s infinite; flex-shrink: 0; }
+@keyframes pd { 0%,100%{opacity:1} 50%{opacity:0.2} }
+#stxt { font-size: 8px; color: var(--stone); letter-spacing: 1px; text-transform: uppercase; }
+
+/* ── LOADER ─────────────────────────────────── */
+#loader {
+  position: fixed; inset: 0; z-index: 9000; background: var(--paper);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+}
+.lt  { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 28px; color: var(--moss); }
+.ls  { font-size: 8px; letter-spacing: 3px; text-transform: uppercase; color: var(--stone); }
+.lbw { width: 200px; height: 1.5px; background: rgba(14,19,24,0.1); border-radius: 1px; overflow: hidden; margin-top: 4px; }
+.lb  { height: 100%; width: 0; background: var(--moss); transition: width 0.35s; }
+#lmsg { font-size: 9px; color: var(--stone); letter-spacing: 1px; }
+
+/* ── ERROR BANNER ───────────────────────────── */
+#errbanner {
+  display: none; position: fixed; top: 62px; left: 50%; transform: translateX(-50%);
+  background: #fff3cd; border: 1px solid #e6c97a; border-radius: 7px;
+  padding: 8px 16px; font-size: 10px; color: #7a5a00; z-index: 1200;
+  max-width: 90vw; text-align: center; box-shadow: 0 2px 10px var(--shadow);
+}
+</style>
+</head>
+<body>
+
+<div id="loader">
+  <div class="lt">Gehölzkarte</div>
+  <div class="ls">Türkenschanzpark · BOKU Wien</div>
+  <div class="lbw"><div class="lb" id="lb"></div></div>
+  <div id="lmsg">Karte wird vorbereitet…</div>
+</div>
+
+<div id="bar">
+  <div><div class="logo-main">Gehölzkarte</div><div class="logo-sub">Türkenschanzpark · BOKU Wien</div></div>
+  <div class="sep"></div>
+  <div id="sbox">
+    <span class="sico">⌕</span>
+    <input id="sinput" type="text" placeholder="Art suchen…" autocomplete="off"/>
+    <div id="sdrop"></div>
+  </div>
+  <button class="fbtn on" data-f="Alle">Alle</button>
+  <button class="fbtn" data-f="Laubbaum">Laubbaum</button>
+  <button class="fbtn" data-f="Nadelbaum">Nadelbaum</button>
+  <button class="fbtn" data-f="Strauch">Strauch</button>
+  <div id="cnt">—</div>
+</div>
+
+<div id="map"></div>
+<div id="errbanner"></div>
+
+<div id="status"><div class="pdot"></div><span id="stxt">Baumkataster wird geladen…</span></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// MAP INIT
+// ═══════════════════════════════════════════════════════════
+const map = L.map('map', { center: [48.2330, 16.3415], zoom: 16, zoomControl: false });
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© <a href="https://osm.org">OpenStreetMap</a> · Baumkataster: Stadt Wien CC BY-SA 3.0 AT',
+  maxZoom: 20,
+}).addTo(map);
+
+// ═══════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════
+let allTrees = [];
+let markerLayer = L.layerGroup().addTo(map);
+let activeFilter = 'Alle';
+const iCache = new Map();
+
+function setBar(p, msg) {
+  document.getElementById('lb').style.width = p + '%';
+  document.getElementById('lmsg').textContent = msg;
+}
+
+function showErr(msg) {
+  const b = document.getElementById('errbanner');
+  b.textContent = msg; b.style.display = 'block';
+  setTimeout(() => b.style.display = 'none', 7000);
+}
+
+// ═══════════════════════════════════════════════════════════
+// ANTHROPIC API — fetches Baumkataster via tool_use
+// Sends the WFS URL to Claude, Claude fetches it server-side
+// (no CORS), returns parsed tree data as JSON.
+// ═══════════════════════════════════════════════════════════
+async function fetchViaAnthropicProxy() {
+  const WFS_URL =
+    'https://data.wien.gv.at/daten/geo?service=WFS&request=GetFeature' +
+    '&version=1.1.0&typeName=ogdwien:BAUMKATOGD&srsName=EPSG:4326' +
+    '&outputFormat=json&bbox=16.328,48.224,16.357,48.243';
+
+  const systemPrompt = `You are a data extraction assistant. 
+The user will give you a GeoJSON FeatureCollection from the Wiener Baumkataster WFS API.
+Extract ALL tree features and return ONLY a JSON array (no markdown, no explanation) with objects:
+{
+  "id": <BAUM_ID as string>,
+  "lat": <latitude number>,
+  "lng": <longitude number>,
+  "latin": <genus + species, e.g. "Acer platanoides">,
+  "de": <german common name from parentheses, or "—">,
+  "stammumfang": <STAMMUMFANG_TXT or "—">,
+  "baumhoehe": <BAUMHOEHE_TXT or "—">,
+  "krone": <KRONENDURCHMESSER_TXT or "—">,
+  "pflanzjahr": <PFLANZJAHR_TXT or "—">,
+  "strasse": <OBJEKT_STRASSE or "—">
+}
+Return ONLY the JSON array, starting with [ and ending with ].`;
+
+  const userMsg = `Please fetch this URL and extract all tree data: ${WFS_URL}
+
+For GATTUNG_ART like "Acer platanoides (Spitzahorn)", latin = "Acer platanoides", de = "Spitzahorn".
+Return only the JSON array of all trees found.`;
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 8000,
+      system: systemPrompt,
+      tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+      messages: [{ role: 'user', content: userMsg }],
+    }),
+  });
+
+  if (!resp.ok) throw new Error('Anthropic API ' + resp.status);
+  const data = await resp.json();
+
+  // Extract text from all content blocks
+  const text = (data.content || [])
+    .filter(b => b.type === 'text')
+    .map(b => b.text)
+    .join('');
+
+  // Parse JSON array from response
+  const match = text.match(/\[[\s\S]*\]/);
+  if (!match) throw new Error('Keine JSON-Daten in Antwort');
+  return JSON.parse(match[0]);
+}
+
+// ═══════════════════════════════════════════════════════════
+// OVERPASS FALLBACK
+// ═══════════════════════════════════════════════════════════
+async function fetchOverpass() {
+  const q = `[out:json][timeout:30][bbox:48.224,16.328,48.243,16.357];node["natural"="tree"];out body;`;
+  const r = await fetch('https://overpass-api.de/api/interpreter', {
+    method: 'POST', body: 'data=' + encodeURIComponent(q),
+  });
+  if (!r.ok) throw new Error('Overpass ' + r.status);
+  const j = await r.json();
+  return (j.elements || []).map(e => {
+    const t = e.tags || {};
+    const raw = t['species:de']
+      ? `${t.species || t.taxon || t['species:de']} (${t['species:de']})`
+      : (t.species || t.taxon || t.name || 'Unbekannte Art');
+    const p = parseArt(raw);
+    return {
+      id: 'o' + e.id, lat: e.lat, lng: e.lon,
+      latin: p.latin, de: t['species:de'] || p.de,
+      stammumfang: '—', baumhoehe: '—', krone: '—', pflanzjahr: '—', strasse: '—',
+      quelle: 'OpenStreetMap',
+    };
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════
+function parseArt(raw) {
+  raw = (raw || '').trim();
+  const m = raw.match(/^(.+?)\s*\((.+?)\)\s*$/);
+  if (m) return { latin: m[1].trim(), de: m[2].trim() };
+  return { latin: raw, de: '—' };
+}
+
+const NADEL = ['Pinus','Picea','Abies','Larix','Taxus','Thuja','Juniperus',
+               'Pseudotsuga','Cedrus','Chamaecyparis','Cupressus','Cryptomeria','Sequoia','Metasequoia'];
+const STRAUCH = ['Corylus','Sambucus','Cornus','Viburnum','Ligustrum','Forsythia',
+                 'Syringa','Berberis','Buddleja','Cotoneaster','Euonymus','Lonicera','Crataegus'];
+function classTyp(latin) {
+  const g = (latin || '').split(' ')[0];
+  if (NADEL.includes(g))   return 'Nadelbaum';
+  if (STRAUCH.includes(g)) return 'Strauch';
+  return 'Laubbaum';
+}
+
+// ═══════════════════════════════════════════════════════════
+// iNATURALIST
+// ═══════════════════════════════════════════════════════════
+async function fetchINat(name) {
+  if (iCache.has(name)) return iCache.get(name);
+  try {
+    const r = await fetch(`https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(name)}&rank=species&per_page=1`);
+    const d = await r.json();
+    if (d.results && d.results[0]) {
+      const t = d.results[0];
+      const res = { photo: t.default_photo?.medium_url || null, wiki: t.wikipedia_url || null };
+      iCache.set(name, res); return res;
+    }
+  } catch(e) {}
+  iCache.set(name, null); return null;
+}
+
+// ═══════════════════════════════════════════════════════════
+// MARKERS
+// ═══════════════════════════════════════════════════════════
+function mkIcon(tree) {
+  const el = document.createElement('div');
+  el.className = 'tdot'; el.dataset.id = tree.id;
+  return L.divIcon({ html: el, className: '', iconSize: [8, 8], iconAnchor: [4, 4] });
+}
+
+let currentPop = null;
+
+function renderAll(trees) {
+  markerLayer.clearLayers();
+  const shown = activeFilter === 'Alle' ? trees : trees.filter(t => t.typ === activeFilter);
+  shown.forEach(tree => {
+    const m = L.marker([tree.lat, tree.lng], { icon: mkIcon(tree) });
+    m.on('click', () => openPopup(tree));
+    markerLayer.addLayer(m);
+  });
+  document.getElementById('cnt').innerHTML = `<b>${shown.length}</b> Gehölze`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// POPUP
+// ═══════════════════════════════════════════════════════════
+function openPopup(tree) {
+  document.querySelectorAll('.tdot.sel').forEach(e => e.classList.remove('sel'));
+  const dot = document.querySelector(`.tdot[data-id="${tree.id}"]`);
+  if (dot) dot.classList.add('sel');
+  if (currentPop) { map.closePopup(currentPop); currentPop = null; }
+
+  const uid = String(tree.id).replace(/[^a-z0-9]/gi, 'x');
+  const quelle = tree.quelle || 'Baumkataster Wien';
+  const html = `<div class="tpop">
+    <div class="tpop-src">${quelle}</div>
+    <div class="tpop-lat">${tree.latin || '—'}</div>
+    ${tree.de && tree.de !== '—' ? `<div class="tpop-de">${tree.de}</div>` : '<div style="height:8px"></div>'}
+    <div id="ph-${uid}" class="tpop-nophoto">Foto wird geladen…</div>
+    <div class="tpop-grid">
+      <div class="tpoc"><div class="tocl">Typ</div><div class="tocv">${tree.typ || '—'}</div></div>
+      <div class="tpoc"><div class="tocl">Stammumfang</div><div class="tocv">${tree.stammumfang || '—'}</div></div>
+      <div class="tpoc"><div class="tocl">Baumhöhe</div><div class="tocv">${tree.baumhoehe || '—'}</div></div>
+      <div class="tpoc"><div class="tocl">Pflanzjahr</div><div class="tocv">${tree.pflanzjahr || '—'}</div></div>
+    </div>
+    ${tree.strasse && tree.strasse !== '—' ? `<div class="tpop-addr">📍 ${tree.strasse}</div>` : ''}
+  </div>`;
+
+  const pop = L.popup({ offset: [0, -3], closeButton: true, autoPan: true, className: '' })
+    .setContent(html).setLatLng([tree.lat, tree.lng]);
+  pop.on('remove', () => {
+    document.querySelectorAll('.tdot.sel').forEach(e => e.classList.remove('sel'));
+    currentPop = null;
+  });
+  pop.openOn(map);
+  currentPop = pop;
+
+  fetchINat(tree.latin).then(d => {
+    const ph = document.getElementById('ph-' + uid);
+    if (!ph) return;
+    if (d && d.photo) {
+      ph.outerHTML = `<div style="position:relative;margin-bottom:9px">
+        <img class="tpop-img" src="${d.photo}" alt="${tree.latin}"/>
+        <span class="tpop-photo-src">© iNaturalist</span>
+      </div>`;
+    } else {
+      ph.textContent = 'Kein Foto verfügbar';
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// SEARCH
+// ═══════════════════════════════════════════════════════════
+const sinput = document.getElementById('sinput');
+const sdrop  = document.getElementById('sdrop');
+
+sinput.addEventListener('input', () => {
+  const q = sinput.value.trim().toLowerCase();
+  if (q.length > 0) {
+    renderAllFiltered(allTrees.filter(t =>
+      (t.latin||'').toLowerCase().includes(q) || (t.de||'').toLowerCase().includes(q)));
+  } else { renderAll(allTrees); }
+
+  if (q.length < 2) { sdrop.style.display = 'none'; return; }
+  const seen = new Set();
+  const hits = allTrees.filter(t => {
+    const ok = ((t.latin||'').toLowerCase().includes(q) || (t.de||'').toLowerCase().includes(q)) && !seen.has(t.latin);
+    if (ok) seen.add(t.latin); return ok;
+  }).slice(0, 9);
+  if (!hits.length) { sdrop.style.display = 'none'; return; }
+  sdrop.innerHTML = hits.map(t => `<div class="sdi" data-id="${t.id}">
+    <div class="sdi-lat">${t.latin}</div>
+    ${t.de && t.de !== '—' ? `<div class="sdi-de">${t.de}</div>` : ''}
+  </div>`).join('');
+  sdrop.style.display = 'block';
+  sdrop.querySelectorAll('.sdi').forEach(el => {
+    el.addEventListener('click', () => {
+      const tree = allTrees.find(t => t.id == el.dataset.id || String(t.id) === el.dataset.id);
+      if (!tree) return;
+      map.flyTo([tree.lat, tree.lng], 18, { duration: 0.8 });
+      setTimeout(() => openPopup(tree), 850);
+      sdrop.style.display = 'none';
+      sinput.value = tree.latin;
+      renderAll(allTrees);
+    });
+  });
+});
+document.addEventListener('click', e => { if (!e.target.closest('#sbox')) sdrop.style.display = 'none'; });
+
+function renderAllFiltered(trees) {
+  markerLayer.clearLayers();
+  trees.forEach(tree => {
+    const m = L.marker([tree.lat, tree.lng], { icon: mkIcon(tree) });
+    m.on('click', () => openPopup(tree));
+    markerLayer.addLayer(m);
+  });
+  document.getElementById('cnt').innerHTML = `<b>${trees.length}</b> Gehölze`;
+}
+
+// filter buttons
+document.querySelectorAll('.fbtn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.fbtn').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on'); activeFilter = btn.dataset.f;
+    sinput.value = ''; sdrop.style.display = 'none';
+    renderAll(allTrees);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+async function init() {
+  setBar(10, 'Karte wird geladen…');
+  await new Promise(r => setTimeout(r, 200));
+
+  let trees = [];
+  let source = '';
+
+  // 1) Try Anthropic proxy (fetches Baumkataster server-side, bypasses CORS)
+  setBar(25, 'Baumkataster Wien wird abgerufen…');
+  try {
+    const raw = await fetchViaAnthropicProxy();
+    if (raw && raw.length > 0) {
+      trees = raw.map(t => ({
+        ...t,
+        id: 'w' + t.id,
+        typ: classTyp(t.latin),
+        quelle: 'Baumkataster Wien',
+      }));
+      source = `Baumkataster Wien · ${trees.length} Bäume`;
+      console.log('✓ Baumkataster via Anthropic proxy:', trees.length, 'Bäume');
+    }
+  } catch(e) {
+    console.warn('Anthropic proxy fehlgeschlagen:', e.message);
+  }
+
+  // 2) Fallback: Overpass
+  if (trees.length === 0) {
+    setBar(50, 'Überpass API (OpenStreetMap) wird genutzt…');
+    showErr('Baumkataster konnte nicht geladen werden – OpenStreetMap wird als Fallback genutzt.');
+    try {
+      trees = await fetchOverpass();
+      source = `OpenStreetMap · ${trees.length} Bäume`;
+      trees = trees.map(t => ({ ...t, typ: classTyp(t.latin) }));
+      console.log('✓ Overpass fallback:', trees.length, 'Bäume');
+    } catch(e2) {
+      console.error('Beide Quellen fehlgeschlagen:', e2);
+      source = 'Datenabruf fehlgeschlagen';
+      showErr('Beide Datenquellen konnten nicht erreicht werden. Bitte Seite neu laden.');
+    }
+  }
+
+  setBar(85, 'Bäume werden eingezeichnet…');
+  await new Promise(r => setTimeout(r, 120));
+
+  allTrees = trees;
+  renderAll(allTrees);
+  document.getElementById('stxt').textContent = source;
+  document.getElementById('cnt').innerHTML = `<b>${trees.length}</b> Gehölze`;
+
+  setBar(100, 'Fertig!');
+  await new Promise(r => setTimeout(r, 380));
+  document.getElementById('loader').style.display = 'none';
+}
+
+init();
+</script>
+</body>
+</html>
