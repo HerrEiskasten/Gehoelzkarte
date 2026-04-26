@@ -13,12 +13,12 @@
   --ink:    #0e1318;
   --paper:  #f4f0e6;
   --moss:   #3a6645;
+  --sage:   #6a9e72;
   --stone:  #8a8278;
   --rust:   #8b4a2a;
   --cream:  rgba(244,240,230,0.97);
   --shad:   rgba(14,19,24,0.16);
   --border: rgba(14,19,24,0.11);
-  --gps:    #1a6fbf;
 }
 html, body { height: 100%; background: var(--paper); color: var(--ink); font-family: 'DM Mono', monospace; overflow: hidden; }
 
@@ -27,20 +27,21 @@ html, body { height: 100%; background: var(--paper); color: var(--ink); font-fam
   position: fixed; top: 0; left: 0; right: 0; height: 52px; z-index: 1100;
   background: var(--cream); border-bottom: 1.5px solid var(--border);
   box-shadow: 0 1px 14px var(--shad);
-  display: flex; align-items: center; gap: 11px; padding: 0 14px;
+  display: flex; align-items: center; gap: 12px; padding: 0 16px;
 }
-.logo { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 19px; color: var(--moss); white-space: nowrap; }
+.logo { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 19px; color: var(--moss); white-space: nowrap; letter-spacing: -0.3px; }
 .sub  { font-size: 8px; color: var(--stone); letter-spacing: 2.5px; text-transform: uppercase; white-space: nowrap; }
 .bar-sep { width: 1px; height: 22px; background: var(--border); flex-shrink: 0; }
 
-#sbox { position: relative; width: 185px; flex-shrink: 0; }
+/* search */
+#sbox { position: relative; width: 190px; flex-shrink: 0; }
 #si {
   width: 100%; background: rgba(14,19,24,0.06);
   border: 1px solid var(--border); border-radius: 6px;
-  padding: 5px 9px 5px 25px; color: var(--ink); font-size: 11px; font-family: 'DM Mono', monospace;
+  padding: 5px 9px 5px 26px; color: var(--ink); font-size: 11px; font-family: 'DM Mono', monospace;
 }
 #si::placeholder { color: var(--stone); }
-#si:focus { outline: none; border-color: var(--moss); }
+#si:focus { outline: none; border-color: var(--moss); background: rgba(58,102,69,0.05); }
 .sico { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 11px; color: var(--stone); pointer-events: none; }
 #sdrop {
   position: absolute; top: calc(100% + 4px); left: 0; right: 0;
@@ -53,6 +54,7 @@ html, body { height: 100%; background: var(--paper); color: var(--ink); font-fam
 .sdi-l { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 13px; color: var(--ink); }
 .sdi-d { font-size: 9px; color: var(--stone); margin-top: 1px; }
 
+/* filter buttons */
 .fb {
   background: transparent; border: 1px solid var(--border);
   color: var(--stone); border-radius: 5px; padding: 4px 10px;
@@ -61,136 +63,196 @@ html, body { height: 100%; background: var(--paper); color: var(--ink); font-fam
 }
 .fb.on { background: var(--moss); border-color: var(--moss); color: #fff; }
 
-/* GPS button in topbar */
-#gps-btn {
-  background: transparent; border: 1px solid var(--border);
-  border-radius: 5px; padding: 4px 10px;
-  font-size: 9px; cursor: pointer; font-family: 'DM Mono', monospace;
-  letter-spacing: 0.5px; text-transform: uppercase;
-  color: var(--gps); display: flex; align-items: center; gap: 5px;
-  transition: all .15s; white-space: nowrap; flex-shrink: 0;
-}
-#gps-btn.active { background: var(--gps); color: #fff; border-color: var(--gps); }
-#gps-btn.searching { animation: gpsWait 1.2s infinite; }
-@keyframes gpsWait { 0%,100%{opacity:1} 50%{opacity:.4} }
-.gps-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
-
 #cnt { margin-left: auto; font-size: 9px; color: var(--stone); white-space: nowrap; flex-shrink: 0; }
 #cnt b { color: var(--moss); }
 
 /* ══ MAP ═══════════════════════════════════════════════════ */
 #map { position: fixed; top: 52px; left: 0; right: 0; bottom: 0; z-index: 1; }
 .leaflet-tile { filter: sepia(0.18) saturate(0.85) brightness(0.98); }
-.leaflet-control-zoom a { background: var(--cream) !important; color: var(--ink) !important; border-color: var(--border) !important; }
-.leaflet-control-attribution { background: rgba(244,240,230,0.88) !important; color: var(--stone) !important; font-size: 8px !important; }
+.leaflet-control-zoom a {
+  background: var(--cream) !important; color: var(--ink) !important;
+  border-color: var(--border) !important; font-family: 'DM Mono', monospace !important;
+}
+.leaflet-control-attribution {
+  background: rgba(244,240,230,0.88) !important; color: var(--stone) !important; font-size: 8px !important;
+}
 
-/* Grey-out outside boundary */
-.bounds-overlay { fill: rgba(80,70,60,0.28); stroke: var(--moss); stroke-width: 2; stroke-dasharray: 6 3; fill-rule: evenodd; }
-
-/* ══ MARKERS ═══════════════════════════════════════════════ */
+/* ══ MARKER DOTS ═══════════════════════════════════════════ */
 .td {
   width: 9px; height: 9px; border-radius: 50%;
-  background: var(--moss); border: 1.5px solid rgba(255,255,255,0.9);
-  cursor: pointer; transition: transform 0.12s;
+  background: var(--moss);
+  border: 1.5px solid rgba(255,255,255,0.9);
+  cursor: pointer;
+  transition: transform 0.12s;
   box-shadow: 0 1px 4px rgba(0,0,0,0.25);
 }
 .td:hover { transform: scale(1.9); }
-.td.sel { background: var(--rust); border-color: #fff; transform: scale(2.2); box-shadow: 0 0 0 3px rgba(139,74,42,0.22); }
-
-/* GPS marker */
-.gps-marker-dot {
-  width: 16px; height: 16px; border-radius: 50%;
-  background: var(--gps); border: 3px solid #fff;
-  box-shadow: 0 0 0 3px rgba(26,111,191,0.3), 0 2px 8px rgba(0,0,0,0.3);
-  animation: gpsPulse 2s infinite;
+.td.sel {
+  background: var(--rust); border-color: #fff;
+  transform: scale(2.2);
+  box-shadow: 0 0 0 3px rgba(139,74,42,0.25), 0 2px 8px rgba(0,0,0,0.3);
 }
-@keyframes gpsPulse { 0%,100%{box-shadow:0 0 0 3px rgba(26,111,191,0.3),0 2px 8px rgba(0,0,0,0.3)} 50%{box-shadow:0 0 0 8px rgba(26,111,191,0.1),0 2px 8px rgba(0,0,0,0.3)} }
 
 /* ══ DROPDOWN POPUP ════════════════════════════════════════ */
+/* Override Leaflet popup completely */
 .leaflet-popup-content-wrapper {
-  background: transparent !important; border: none !important;
-  border-radius: 0 !important; box-shadow: none !important; padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
 }
 .leaflet-popup-tip-container { display: none !important; }
 .leaflet-popup-content { margin: 0 !important; width: auto !important; }
 .leaflet-popup-close-button { display: none !important; }
 
-.dc {
-  background: var(--cream); border: 1.5px solid var(--border);
-  border-radius: 12px; width: 280px;
+/* The actual dropdown card */
+.dropdown-card {
+  background: var(--cream);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
   box-shadow: 0 10px 40px rgba(14,19,24,0.22), 0 2px 8px rgba(14,19,24,0.1);
-  overflow: visible; position: relative;
-  animation: dropIn 0.2s cubic-bezier(0.4,0,0.2,1);
+  width: 280px;
   font-family: 'DM Mono', monospace;
+  overflow: hidden;
+  animation: dropIn 0.2s cubic-bezier(0.4,0,0.2,1);
 }
-@keyframes dropIn { from{opacity:0;transform:translateY(-8px) scale(0.97)} to{opacity:1;transform:none} }
+@keyframes dropIn {
+  from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
 
-/* Downward arrow */
-.dc::after  { content:''; position:absolute; bottom:-9px; left:50%; transform:translateX(-50%); border:9px solid transparent; border-top-color:var(--cream); border-bottom:none; }
-.dc::before { content:''; position:absolute; bottom:-11px; left:50%; transform:translateX(-50%); border:10px solid transparent; border-top-color:rgba(14,19,24,0.13); border-bottom:none; }
+/* Arrow pointing down to the tree dot */
+.dropdown-card::after {
+  content: '';
+  position: absolute;
+  bottom: -9px; left: 50%; transform: translateX(-50%);
+  border: 9px solid transparent;
+  border-top-color: var(--cream);
+  border-bottom: none;
+  filter: drop-shadow(0 2px 2px rgba(14,19,24,0.08));
+}
+.dropdown-card::before {
+  content: '';
+  position: absolute;
+  bottom: -11px; left: 50%; transform: translateX(-50%);
+  border: 10px solid transparent;
+  border-top-color: var(--border);
+  border-bottom: none;
+}
 
-/* inner scroll container */
-.dc-inner { overflow: hidden; border-radius: 10px; }
+/* Card header */
+.dc-head {
+  padding: 13px 15px 10px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.dc-src {
+  font-size: 8px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--stone); margin-bottom: 3px;
+}
+.dc-latin {
+  font-family: 'Cormorant Garamond', serif; font-style: italic;
+  font-size: 19px; color: var(--ink); line-height: 1.2;
+  padding-right: 28px;
+}
+.dc-de {
+  font-family: 'Cormorant Garamond', serif; font-size: 13px;
+  color: var(--moss); margin-top: 2px;
+}
+.dc-close {
+  position: absolute; top: 10px; right: 10px;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: rgba(14,19,24,0.07); border: none;
+  cursor: pointer; font-size: 14px; color: var(--stone);
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s;
+}
+.dc-close:hover { background: rgba(14,19,24,0.13); }
 
-.dc-head { padding: 12px 14px 10px; border-bottom: 1px solid var(--border); position: relative; }
-.dc-src   { font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: var(--stone); margin-bottom: 2px; }
-.dc-lat   { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 19px; color: var(--ink); line-height: 1.2; padding-right: 26px; }
-.dc-de    { font-family: 'Cormorant Garamond', serif; font-size: 13px; color: var(--moss); margin-top: 2px; }
-.dc-close { position: absolute; top: 9px; right: 9px; width: 24px; height: 24px; border-radius: 50%; background: rgba(14,19,24,0.07); border: none; cursor: pointer; font-size: 14px; color: var(--stone); display: flex; align-items: center; justify-content: center; }
-.dc-close:hover { background: rgba(14,19,24,0.14); }
-
-/* Photo */
-.dc-photo-wrap { height: 128px; overflow: hidden; background: rgba(14,19,24,0.04); border-bottom: 1px solid var(--border); position: relative; display: flex; align-items: center; justify-content: center; }
+/* Photo area */
+.dc-photo-wrap {
+  position: relative; height: 130px; overflow: hidden;
+  background: rgba(14,19,24,0.04);
+  border-bottom: 1px solid var(--border);
+}
 .dc-photo { width: 100%; height: 100%; object-fit: cover; display: block; }
-.dc-photo-src { position: absolute; bottom: 6px; right: 7px; background: rgba(14,19,24,0.58); border-radius: 3px; padding: 2px 5px; font-size: 7px; color: rgba(244,240,230,0.88); }
-.spinner { width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(58,102,69,0.15); border-top-color: var(--moss); animation: spin 0.8s linear infinite; }
-@keyframes spin { to{transform:rotate(360deg)} }
-.dc-nophoto { font-size: 9px; color: var(--stone); }
+.dc-photo-loading {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  gap: 6px; flex-direction: column;
+}
+.dc-photo-loading span { font-size: 9px; color: var(--stone); letter-spacing: 1px; }
+.dc-photo-src {
+  position: absolute; bottom: 7px; right: 8px;
+  background: rgba(14,19,24,0.58); border-radius: 3px;
+  padding: 2px 6px; font-size: 7px; color: rgba(244,240,230,0.88);
+}
+.spinner {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 2px solid rgba(58,102,69,0.15);
+  border-top-color: var(--moss);
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
-/* Merkmale block */
-.dc-merkmale { padding: 10px 13px; border-bottom: 1px solid var(--border); }
-.dc-m-label  { font-size: 7px; letter-spacing: 1.8px; text-transform: uppercase; color: var(--stone); margin-bottom: 5px; }
-.dc-m-tags   { display: flex; flex-wrap: wrap; gap: 4px; }
-.dc-m-tag    { background: rgba(58,102,69,0.1); border: 1px solid rgba(58,102,69,0.2); border-radius: 4px; padding: 3px 8px; font-size: 10px; color: var(--moss); font-family: 'Cormorant Garamond', serif; font-style: italic; letter-spacing: 0.2px; }
-.dc-m-none   { font-size: 10px; color: var(--stone); font-style: italic; }
+/* Info grid */
+.dc-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 1px; background: var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.dc-cell {
+  background: var(--cream); padding: 8px 11px;
+}
+.dc-cell-full {
+  background: var(--cream); padding: 8px 11px;
+  grid-column: 1 / -1; border-top: 1px solid var(--border);
+}
+.dc-label { font-size: 7px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--stone); margin-bottom: 2px; }
+.dc-val   { font-size: 11px; color: var(--ink); }
 
 /* Footer */
-.dc-foot { padding: 8px 13px; display: flex; align-items: center; justify-content: space-between; }
+.dc-foot {
+  padding: 8px 13px;
+  display: flex; align-items: center; justify-content: space-between;
+}
 .dc-coord { font-size: 8px; color: var(--stone); }
-.dc-wiki  { font-size: 9px; color: var(--moss); text-decoration: none; border: 1px solid rgba(58,102,69,0.3); border-radius: 4px; padding: 3px 8px; letter-spacing: 0.3px; }
+.dc-wiki {
+  font-size: 9px; color: var(--moss); text-decoration: none;
+  border: 1px solid rgba(58,102,69,0.3); border-radius: 4px;
+  padding: 3px 8px; transition: background .15s;
+  letter-spacing: 0.3px;
+}
 .dc-wiki:hover { background: rgba(58,102,69,0.08); }
 
-/* ══ GPS ACCURACY RING ════════════════════════════════════ */
-.leaflet-gps-accuracy { stroke: var(--gps); stroke-width: 1.5; fill: rgba(26,111,191,0.08); }
-
-/* ══ GPS STATUS TOAST ═════════════════════════════════════ */
-#gps-toast {
-  position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%);
-  z-index: 2000; background: var(--cream); border: 1px solid var(--border);
-  border-radius: 8px; padding: 7px 16px; font-size: 9px; color: var(--stone);
-  letter-spacing: 0.8px; text-transform: uppercase;
-  box-shadow: 0 2px 12px var(--shad); display: none; white-space: nowrap;
-}
-#gps-toast.visible { display: block; animation: toastIn .2s ease; }
-@keyframes toastIn { from{opacity:0;transform:translateX(-50%) translateY(4px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
-
 /* ══ STATUS BADGE ══════════════════════════════════════════ */
-#status { position: fixed; bottom: 14px; left: 14px; z-index: 800; background: var(--cream); border: 1px solid var(--border); border-radius: 7px; padding: 5px 12px; display: flex; align-items: center; gap: 7px; box-shadow: 0 2px 12px var(--shad); }
+#status {
+  position: fixed; bottom: 13px; left: 13px; z-index: 800;
+  background: var(--cream); border: 1px solid var(--border);
+  border-radius: 7px; padding: 5px 12px;
+  display: flex; align-items: center; gap: 7px;
+  box-shadow: 0 2px 12px var(--shad);
+}
 .pd { width: 6px; height: 6px; border-radius: 50%; background: var(--moss); animation: pa 2.2s infinite; flex-shrink: 0; }
 @keyframes pa { 0%,100%{opacity:1} 50%{opacity:.2} }
 #stxt { font-size: 8px; color: var(--stone); letter-spacing: 1px; text-transform: uppercase; }
 
 /* ══ LOADER ════════════════════════════════════════════════ */
-#loader { position: fixed; inset: 0; z-index: 9000; background: var(--paper); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+#loader {
+  position: fixed; inset: 0; z-index: 9000; background: var(--paper);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+}
 .lt { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 28px; color: var(--moss); }
 .ls { font-size: 8px; letter-spacing: 3px; text-transform: uppercase; color: var(--stone); }
 .lbw { width: 200px; height: 1.5px; background: rgba(14,19,24,0.1); border-radius: 1px; overflow: hidden; margin-top: 4px; }
-.lb  { height: 100%; width: 0%; background: var(--moss); transition: width .35s; }
+.lb  { height: 100%; width: 0%; background: var(--moss); border-radius: 1px; transition: width .35s; }
 #lm  { font-size: 9px; color: var(--stone); letter-spacing: 1px; }
 </style>
 </head>
 <body>
 
+<!-- LOADER -->
 <div id="loader">
   <div class="lt">Gehölzkarte</div>
   <div class="ls">Türkenschanzpark · BOKU Wien</div>
@@ -198,8 +260,12 @@ html, body { height: 100%; background: var(--paper); color: var(--ink); font-fam
   <div id="lm">Karte wird vorbereitet…</div>
 </div>
 
+<!-- TOP BAR -->
 <div id="bar">
-  <div><div class="logo">Gehölzkarte</div><div class="sub">Türkenschanzpark · BOKU Wien</div></div>
+  <div>
+    <div class="logo">Gehölzkarte</div>
+    <div class="sub">Türkenschanzpark · BOKU Wien</div>
+  </div>
   <div class="bar-sep"></div>
   <div id="sbox">
     <span class="sico">⌕</span>
@@ -210,282 +276,42 @@ html, body { height: 100%; background: var(--paper); color: var(--ink); font-fam
   <button class="fb" data-f="Laubbaum">Laubbaum</button>
   <button class="fb" data-f="Nadelbaum">Nadelbaum</button>
   <button class="fb" data-f="Strauch">Strauch</button>
-  <div class="bar-sep"></div>
-  <button id="gps-btn"><span class="gps-dot"></span>Standort</button>
   <div id="cnt">—</div>
 </div>
 
+<!-- MAP -->
 <div id="map"></div>
-<div id="gps-toast"></div>
+
+<!-- STATUS -->
 <div id="status"><div class="pd"></div><span id="stxt">Baumkataster wird geladen…</span></div>
 
 <script>
-// ════════════════════════════════════════════════════════════
-// BOUNDARY — prüfungsrelevantes Gebiet
-// S: Sternwartstraße  W: Döblinger Friedhof (Ostrand = Borkowskigasse)
-// E: Cottagegasse     N: Nedergasse
-// ════════════════════════════════════════════════════════════
-const BOUNDS = {
-  south: 48.2265,  // Sternwartstraße / Hasenauerstraße
-  north: 48.2430,  // Nedergasse
-  west:  16.3345,  // Max-Emanuel-Straße (westliche Parkgrenze, außerhalb)
-  east:  16.3535,  // Cottagegasse
-};
-const L_BOUNDS = L.latLngBounds(
-  L.latLng(BOUNDS.south, BOUNDS.west),
-  L.latLng(BOUNDS.north, BOUNDS.east)
-);
-
-// ════════════════════════════════════════════════════════════
-// MAP INIT — locked to boundary
-// ════════════════════════════════════════════════════════════
-const map = L.map('map', {
-  center: [48.2338, 16.3415],
-  zoom: 16,
-  zoomControl: false,
-  maxBounds: L_BOUNDS,          // hard pan limit
-  maxBoundsViscosity: 1.0,      // can't drag outside
-  minZoom: 14,                  // can't zoom out past boundary
-  maxZoom: 20,
-});
+// ════════════════════════════════════════════════
+// MAP INIT
+// ════════════════════════════════════════════════
+const map = L.map('map', { center:[48.2330,16.3415], zoom:16, zoomControl:false });
 L.control.zoom({ position:'bottomright' }).addTo(map);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution:'© <a href="https://osm.org">OpenStreetMap</a> · Baumkataster: Stadt Wien CC BY-SA 3.0 AT',
   maxZoom:20,
 }).addTo(map);
 
-// Subtle grey overlay outside the study area boundary
-// We draw a large world rectangle with a hole cut out for the allowed area
-const worldPoly = [
-  [-90,-180],[-90,180],[90,180],[90,-180]
-];
-const holePoly = [
-  [BOUNDS.south, BOUNDS.west],
-  [BOUNDS.south, BOUNDS.east],
-  [BOUNDS.north, BOUNDS.east],
-  [BOUNDS.north, BOUNDS.west],
-];
-L.polygon([worldPoly, holePoly], {
-  className:'bounds-overlay', interactive: false,
-}).addTo(map);
+// ════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════
+let allTrees = [], activeFilter = 'Alle';
+const markerLayer = L.layerGroup().addTo(map);
+const iCache = new Map();
+let curPop = null;
 
-// Dashed boundary box outline
-L.rectangle(L_BOUNDS, {
-  fill: false, color: '#3a6645', weight: 2,
-  dashArray: '7 4', interactive: false, opacity: 0.55,
-}).addTo(map);
-
-// ════════════════════════════════════════════════════════════
-// SPECIES TRAITS DATABASE
-// 1–2 markante Merkmale pro Art (Gehölzkunde-relevant)
-// ════════════════════════════════════════════════════════════
-const TRAITS = {
-  // Nadelbäume
-  'Taxus baccata':             ['Zweihäusig', 'Gescheitelte Nadeln'],
-  'Pinus sylvestris':          ['Zweinadelich', 'Orange-rote Borke oben'],
-  'Pinus nigra':               ['Zweinadelich', 'Schwarze Borke'],
-  'Picea abies':               ['Hängende Zapfen', 'Herablaufende Nadeln'],
-  'Abies alba':                ['Stehende Zapfen', 'Silberweiße Nadelunterseite'],
-  'Larix decidua':             ['Sommergrün', 'Weiche Büschel-Nadeln'],
-  'Pseudotsuga menziesii':     ['Dreizähnige Braktee', 'Nadelabdruck oval'],
-  'Thuja occidentalis':        ['Schuppenblätter flach', 'Aromatisch'],
-  'Thuja plicata':             ['Schuppenblätter glänzend', 'Weiße X-Zeichnung unten'],
-  'Chamaecyparis lawsoniana':  ['Hängende Triebspitzen', 'Schuppenblätter'],
-  'Juniperus communis':        ['Stechende Nadeln', 'Blaue Beeren'],
-  'Ginkgo biloba':             ['Fächerblatt, zweilappig', 'Zweihäusig'],
-  'Cedrus libani':             ['Stehende Zapfen', 'Waagerechte Äste'],
-  'Cedrus atlantica':          ['Aufrechte Äste', 'Blaugrüne Nadeln'],
-  'Sequoiadendron giganteum':  ['Weiche Schuppenblätter', 'Rote Borke, weich'],
-  'Metasequoia glyptostroboides': ['Sommergrün', 'Gegenständige Nadeln'],
-  'Cryptomeria japonica':      ['Spiralförmige Schuppen', 'Weiche Nadeln'],
-  // Laubbäume — Quercus
-  'Quercus robur':             ['Gestielte Eicheln', 'Geöhrte Blattbasis'],
-  'Quercus petraea':           ['Gestielte Blätter', 'Ungestielte Eicheln'],
-  'Quercus pubescens':         ['Behaarte Blätter', 'Felshang-Standort'],
-  'Quercus cerris':            ['Borstige Cupula', 'Fransige Knospen'],
-  'Quercus rubra':             ['Spitze Blattlappen', 'Rote Herbstfärbung'],
-  'Quercus palustris':         ['Tief eingeschnittene Lappen', 'Hängende Äste'],
-  // Fagus / Buche
-  'Fagus sylvatica':           ['Vielzähnige Knospen', 'Glatte Grauborke'],
-  'Castanea sativa':           ['Lange gezähnte Blätter', 'Igelfrüchte'],
-  // Acer / Ahorn
-  'Acer platanoides':          ['Milchsaft im Blattstiel', 'Gegenständig'],
-  'Acer pseudoplatanus':       ['Kein Milchsaft', 'Hängender Blütenstand'],
-  'Acer campestre':            ['Milchsaft', 'Korkleisten an Zweigen'],
-  'Acer saccharinum':          ['Silbrig-weißer Blattunterseite', 'Gegenständig'],
-  'Acer negundo':              ['Gefiederte Blätter', 'Nur Ahorn mit gefiedertem Blatt'],
-  // Tilia / Linde
-  'Tilia cordata':             ['Kleine Blätter', 'Blaue Staubbeutel'],
-  'Tilia platyphyllos':        ['Große Blätter behaart', 'Gelbe Staubbeutel'],
-  'Tilia tomentosa':           ['Weißfilzige Blattunterseite', 'Silberlinde'],
-  // Fraxinus / Esche
-  'Fraxinus excelsior':        ['Schwarze Knospen', 'Gefiedertes Blatt'],
-  'Fraxinus ornus':            ['Weiße Blüten', 'Graue Knospen'],
-  // Platane
-  'Platanus × acerifolia':     ['Abblätternde Borke', 'Stachelfrüchte'],
-  'Platanus orientalis':       ['Tief eingeschnittene Blätter', 'Abblätternde Borke'],
-  // Birke / Erle
-  'Betula pendula':            ['Weiße Borke', 'Hängende Zweige'],
-  'Betula pubescens':          ['Behaarte Zweige', 'Nicht hängend'],
-  'Alnus glutinosa':           ['Klebrige Blätter', 'Zapfenähnliche Fruchtstände'],
-  'Alnus incana':              ['Graubehaarte Blätter', 'Heller als A. glutinosa'],
-  // Carpinus / Hainbuche
-  'Carpinus betulus':          ['Doppelt gesägtes Blatt', 'Dreilappige Fruchtschuppe'],
-  // Robinie / Gleditschie
-  'Robinia pseudoacacia':      ['Zweidornig', 'Unpaarig gefiedert'],
-  'Gleditsia triacanthos':     ['Dreizähnige Dornen', 'Lange Hülsenfrüchte'],
-  // Rosskastanie
-  'Aesculus hippocastanum':    ['Gefingert, 7-zählig', 'Stachelige Frucht'],
-  'Aesculus × carnea':         ['Rote Blüten', 'Wenig stachelig'],
-  // Linde verwandt / Ulme
-  'Ulmus minor':               ['Schief-herzförmige Basis', 'Korkleisten möglich'],
-  'Ulmus glabra':              ['Keine Korkleisten', 'Blatt oben rau'],
-  // Prunus
-  'Prunus avium':              ['Drüsen am Blattstiel', 'Glänzende Borke'],
-  'Prunus padus':              ['Traubige Blüten', 'Unangenehmer Geruch Rinde'],
-  'Prunus serotina':           ['Sägeähnlich gekerbt', 'Schwarze Früchte'],
-  // Sorbus
-  'Sorbus aucuparia':          ['Unpaarig gefiedert', 'Rote Vogelbeeren'],
-  'Sorbus aria':               ['Weißfilzige Blattunterseite', 'Rote Früchte'],
-  'Sorbus torminalis':         ['Ahornähnliche Blätter', 'Braune Früchte'],
-  // Sonstige
-  'Juglans regia':             ['Aromatisch', 'Fiederblatt 5–9 Blättchen'],
-  'Populus tremula':           ['Flatterende Blätter', 'Graugrüne Borke'],
-  'Populus alba':              ['Weißfilzige Blattunterseite', 'Weiße Borke'],
-  'Populus nigra':             ['Dreiecksblatt', 'Schwarze Borke im Alter'],
-  'Salix alba':                ['Silbrig behaarte Blätter', 'Lange schmal'],
-  'Salix caprea':              ['Oval, runzelig', 'Weidenkätzchen früh'],
-  'Liquidambar styraciflua':   ['Handförmig 5-lappig', 'Rote Herbstfärbung'],
-  'Liriodendron tulipifera':   ['Sattelförmiges Blatt', 'Tulpenblüte'],
-  'Paulownia tomentosa':       ['Große herzförmige Blätter', 'Violette Blüten'],
-  'Ailanthus altissima':       ['Drüsenkerbe am Blattgrund', 'Gefiedertes Blatt'],
-  'Cercidiphyllum japonicum':  ['Herzblättrig gegenständig', 'Karamellaroma'],
-  'Koelreuteria paniculata':   ['Gelbe Rispenblüten', 'Blasenfrüchte'],
-  'Catalpa bignonioides':      ['Große herzförmige Blätter', 'Lange Schoten'],
-  'Styphnolobium japonicum':   ['Unpaarig gefiedert', 'Weiße Schmetterlingsblüten'],
-  'Parrotia persica':          ['Rote Herbstfärbung', 'Schuppige Borke'],
-  'Zelkova serrata':           ['Gesägte Blätter, wechselständig', 'Glatte Borke'],
-  // Sträucher
-  'Corylus avellana':          ['Männliche Kätzchen', 'Haselnuss'],
-  'Cornus mas':                ['Gelbe Blüten vor Blattaustrieb', 'Rote Steinfrucht'],
-  'Cornus sanguinea':          ['Rote Zweige', 'Weiße Blüten'],
-  'Sambucus nigra':            ['Unpaarig gefiedert', 'Schwarze Beeren'],
-  'Viburnum opulus':           ['Dreilappiges Blatt', 'Rote Beeren'],
-  'Crataegus monogyna':        ['Eingriffelig', 'Tiefgelappte Blätter'],
-  'Crataegus laevigata':       ['Zweigriffelig', 'Weniger gelappt'],
-  'Ligustrum vulgare':         ['Ledrige immergrüne Blätter', 'Schwarze Beeren'],
-  'Euonymus europaeus':        ['Vierkantige Zweige', 'Rote Kapselfrüchte'],
-  'Lonicera xylosteum':        ['Behaarte Blätter', 'Rote Beerenpaare'],
-};
-
-// Fallback: extract genus-level traits
-const GENUS_TRAITS = {
-  'Quercus':     ['Eichelfrüchte (Cupula)', 'Wechselständig'],
-  'Acer':        ['Geflügelte Spaltfrüchte', 'Gegenständig'],
-  'Tilia':       ['Tragblatt am Fruchtstiel', 'Herzförmig'],
-  'Fraxinus':    ['Gefiedertes Blatt', 'Gegenständig'],
-  'Pinus':       ['Nadelbaum, Zapfen', 'Nadeln in Bündeln'],
-  'Picea':       ['Hängende Zapfen', 'Einzelne Nadeln'],
-};
-
-function getTraits(latin) {
-  if (!latin) return null;
-  // Exact match
-  for (const key of Object.keys(TRAITS)) {
-    if (latin.toLowerCase().startsWith(key.toLowerCase())) return TRAITS[key];
-  }
-  // Genus match
-  const genus = latin.split(' ')[0];
-  return GENUS_TRAITS[genus] || null;
-}
-
-// ════════════════════════════════════════════════════════════
-// GPS
-// ════════════════════════════════════════════════════════════
-let gpsMarker = null, gpsCircle = null, gpsActive = false, gpsWatchId = null;
-
-function toast(msg, duration=3000) {
-  const el = document.getElementById('gps-toast');
-  el.textContent = msg; el.classList.add('visible');
-  clearTimeout(el._t);
-  el._t = setTimeout(() => el.classList.remove('visible'), duration);
-}
-
-function setGpsBtn(state) {
-  const btn = document.getElementById('gps-btn');
-  btn.classList.remove('active','searching');
-  if (state === 'active')    btn.classList.add('active');
-  if (state === 'searching') btn.classList.add('searching');
-}
-
-function placeGpsMarker(lat, lng, accuracy) {
-  const latlng = L.latLng(lat, lng);
-  const dotEl = document.createElement('div');
-  dotEl.className = 'gps-marker-dot';
-  const icon = L.divIcon({ html:dotEl, className:'', iconSize:[16,16], iconAnchor:[8,8] });
-
-  if (gpsMarker) gpsMarker.setLatLng(latlng);
-  else { gpsMarker = L.marker(latlng, { icon, zIndexOffset:1000 }).addTo(map); }
-
-  if (gpsCircle) gpsCircle.setLatLng(latlng).setRadius(accuracy);
-  else { gpsCircle = L.circle(latlng, { radius:accuracy, className:'leaflet-gps-accuracy', interactive:false }).addTo(map); }
-}
-
-function removeGpsMarker() {
-  if (gpsMarker) { map.removeLayer(gpsMarker); gpsMarker = null; }
-  if (gpsCircle) { map.removeLayer(gpsCircle); gpsCircle = null; }
-}
-
-function toggleGPS() {
-  if (!navigator.geolocation) { toast('GPS nicht verfügbar'); return; }
-
-  if (gpsActive) {
-    // Turn off
-    gpsActive = false;
-    if (gpsWatchId !== null) { navigator.geolocation.clearWatch(gpsWatchId); gpsWatchId = null; }
-    removeGpsMarker();
-    setGpsBtn('off');
-    toast('Standort deaktiviert');
-    return;
-  }
-
-  // Turn on
-  gpsActive = true;
-  setGpsBtn('searching');
-  toast('Standort wird ermittelt…', 5000);
-
-  gpsWatchId = navigator.geolocation.watchPosition(
-    (pos) => {
-      const { latitude:lat, longitude:lng, accuracy } = pos.coords;
-      placeGpsMarker(lat, lng, accuracy);
-      setGpsBtn('active');
-      // On first fix: fly to location (only if inside bounds or nearby)
-      if (!gpsMarker || !map.getBounds().contains([lat,lng])) {
-        map.flyTo([lat, lng], 17, { duration:1 });
-      }
-      toast(`Genauigkeit ±${Math.round(accuracy)} m`, 2500);
-    },
-    (err) => {
-      setGpsBtn('off');
-      gpsActive = false;
-      if (err.code === 1) toast('Standortzugriff verweigert');
-      else if (err.code === 2) toast('Standort nicht verfügbar');
-      else toast('GPS-Fehler');
-    },
-    { enableHighAccuracy:true, maximumAge:5000, timeout:15000 }
-  );
-}
-
-document.getElementById('gps-btn').addEventListener('click', toggleGPS);
-
-// ════════════════════════════════════════════════════════════
-// HELPERS
-// ════════════════════════════════════════════════════════════
-const setBar = (p,m) => {
+const bar = (p,m) => {
   document.getElementById('lb').style.width = p+'%';
   document.getElementById('lm').textContent = m;
 };
 
+// ════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════
 function parseArt(raw) {
   raw = (raw||'').trim();
   const m = raw.match(/^(.+?)\s*\((.+?)\)\s*$/);
@@ -493,8 +319,7 @@ function parseArt(raw) {
 }
 
 const NADEL   = new Set(['Pinus','Picea','Abies','Larix','Taxus','Thuja','Juniperus',
-  'Pseudotsuga','Cedrus','Chamaecyparis','Cupressus','Cryptomeria','Sequoia',
-  'Sequoiadendron','Metasequoia','Ginkgo']);
+  'Pseudotsuga','Cedrus','Chamaecyparis','Cupressus','Cryptomeria','Sequoia','Metasequoia','Ginkgo']);
 const STRAUCH = new Set(['Corylus','Sambucus','Cornus','Viburnum','Ligustrum','Forsythia',
   'Syringa','Berberis','Buddleja','Cotoneaster','Euonymus','Lonicera','Crataegus','Spiraea','Ribes','Rosa']);
 
@@ -503,73 +328,94 @@ function classTyp(latin) {
   return NADEL.has(g) ? 'Nadelbaum' : STRAUCH.has(g) ? 'Strauch' : 'Laubbaum';
 }
 
-// ════════════════════════════════════════════════════════════
-// DATA — WFS primary, Overpass fallback
-// ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════
+// DATA SOURCE 1 — Wiener Baumkataster WFS
+// (data.wien.gv.at sends CORS headers from deployed domains)
+// ════════════════════════════════════════════════
 async function loadWFS() {
-  const w=BOUNDS.west, s=BOUNDS.south, e=BOUNDS.east, n=BOUNDS.north;
-  const url = `https://data.wien.gv.at/daten/geo?service=WFS&request=GetFeature`
-    + `&version=1.1.0&typeName=ogdwien:BAUMKATOGD&srsName=EPSG:4326`
-    + `&outputFormat=json&bbox=${w},${s},${e},${n}`;
+  const url = 'https://data.wien.gv.at/daten/geo?service=WFS&request=GetFeature'
+    + '&version=1.1.0&typeName=ogdwien:BAUMKATOGD&srsName=EPSG:4326'
+    + '&outputFormat=json&bbox=16.326,48.222,16.356,48.244';
   const r = await fetch(url);
-  if (!r.ok) throw new Error('WFS '+r.status);
+  if (!r.ok) throw new Error('WFS ' + r.status);
   const j = await r.json();
   return (j.features||[]).map((f,i) => {
-    const p=f.properties, c=f.geometry.coordinates;
-    const a=parseArt(p.GATTUNG_ART||'');
-    return { id:'w'+(p.BAUM_ID||i), lat:c[1], lng:c[0],
-      latin:a.latin, de:a.de, typ:classTyp(a.latin),
-      strasse:p.OBJEKT_STRASSE||'—', quelle:'Baumkataster Wien' };
+    const p = f.properties, c = f.geometry.coordinates;
+    const a = parseArt(p.GATTUNG_ART||'');
+    return {
+      id: 'w'+(p.BAUM_ID||i), lat:c[1], lng:c[0],
+      latin: a.latin, de: a.de, typ: classTyp(a.latin),
+      stammumfang: p.STAMMUMFANG_TXT || '—',
+      baumhoehe:   p.BAUMHOEHE_TXT   || '—',
+      krone:       p.KRONENDURCHMESSER_TXT || '—',
+      pflanzjahr:  p.PFLANZJAHR_TXT  || '—',
+      strasse:     p.OBJEKT_STRASSE  || '—',
+      quelle: 'Baumkataster Wien',
+    };
   });
 }
 
+// ════════════════════════════════════════════════
+// DATA SOURCE 2 — OpenStreetMap Overpass API
+// (CORS-safe, always works from any browser)
+// ════════════════════════════════════════════════
 async function loadOverpass() {
-  const {south:s,west:w,north:n,east:e} = BOUNDS;
-  const q = `[out:json][timeout:40][bbox:${s},${w},${n},${e}];
-(node["natural"="tree"];node["ref:baumkataster"];);out body;`;
-  const r = await fetch('https://overpass-api.de/api/interpreter',
-    { method:'POST', body:'data='+encodeURIComponent(q) });
-  if (!r.ok) throw new Error('Overpass '+r.status);
+  // Extended bbox: Türkenschanzpark + BOKU gardens + surrounding streets
+  const bbox = '48.222,16.326,48.244,16.356';
+  const q = `[out:json][timeout:40][bbox:${bbox}];
+(
+  node["natural"="tree"];
+  node["ref:baumkataster"];
+);
+out body;`;
+  const r = await fetch('https://overpass-api.de/api/interpreter', {
+    method:'POST', body:'data='+encodeURIComponent(q),
+  });
+  if (!r.ok) throw new Error('Overpass ' + r.status);
   const j = await r.json();
   return (j.elements||[]).map(e => {
-    const t=e.tags||{};
-    const specLat=t.species||t.taxon||'', specDe=t['species:de']||t['taxon:de']||'';
-    let latin=specLat||t.name||'Unbekannte Art', de=specDe||'—';
+    const t = e.tags||{};
+    const specLat = t['species']||t['taxon']||'';
+    const specDe  = t['species:de']||t['taxon:de']||'';
+    let latin = specLat || t['name'] || 'Unbekannte Art';
+    let de    = specDe || '—';
     if (!specDe && specLat.includes('(')) { const p=parseArt(specLat); latin=p.latin; de=p.de; }
-    return { id:'o'+e.id, lat:e.lat, lng:e.lon,
-      latin, de, typ:classTyp(latin),
-      strasse:t['addr:street']||t.loc_name||'—',
-      quelle: t['ref:baumkataster']?'Baumkataster Wien (via OSM)':'OpenStreetMap' };
+    return {
+      id: 'o'+e.id, lat:e.lat, lng:e.lon,
+      latin, de, typ: classTyp(latin),
+      stammumfang: t['circumference'] ? Math.round(parseFloat(t['circumference'])*100)+' cm' : '—',
+      baumhoehe:   t['height']||'—',
+      krone:       t['diameter_crown'] ? t['diameter_crown']+' m' : '—',
+      pflanzjahr:  t['start_date']||t['plant:start_date']||'—',
+      strasse:     t['addr:street']||t['loc_name']||'—',
+      quelle: t['ref:baumkataster'] ? 'Baumkataster Wien (via OSM)' : 'OpenStreetMap',
+    };
   });
 }
 
-// ════════════════════════════════════════════════════════════
-// iNaturalist
-// ════════════════════════════════════════════════════════════
-const iCache = new Map();
+// ════════════════════════════════════════════════
+// iNATURALIST PHOTO FETCH
+// ════════════════════════════════════════════════
 async function fetchINat(name) {
   if (iCache.has(name)) return iCache.get(name);
   try {
     const r = await fetch(`https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(name)}&rank=species&per_page=1`);
     const d = await r.json();
     if (d.results?.[0]) {
-      const t=d.results[0];
+      const t = d.results[0];
       const res = { photo:t.default_photo?.medium_url||null, wiki:t.wikipedia_url||null };
-      iCache.set(name,res); return res;
+      iCache.set(name, res); return res;
     }
-  } catch(e){}
-  iCache.set(name,null); return null;
+  } catch(e) {}
+  iCache.set(name, null); return null;
 }
 
-// ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════
 // MARKERS
-// ════════════════════════════════════════════════════════════
-let allTrees=[], activeFilter='Alle', curPop=null;
-const markerLayer = L.layerGroup().addTo(map);
-
+// ════════════════════════════════════════════════
 function mkIcon(id) {
-  const el=document.createElement('div');
-  el.className='td'; el.dataset.id=id;
+  const el = document.createElement('div');
+  el.className = 'td'; el.dataset.id = id;
   return L.divIcon({ html:el, className:'', iconSize:[9,9], iconAnchor:[4,4] });
 }
 
@@ -577,8 +423,8 @@ function renderAll(trees) {
   markerLayer.clearLayers();
   const shown = activeFilter==='Alle' ? trees : trees.filter(t=>t.typ===activeFilter);
   shown.forEach(tree => {
-    const m=L.marker([tree.lat,tree.lng], { icon:mkIcon(tree.id) });
-    m.on('click',()=>openDropdown(tree));
+    const m = L.marker([tree.lat, tree.lng], { icon:mkIcon(tree.id) });
+    m.on('click', () => openDropdown(tree));
     markerLayer.addLayer(m);
   });
   document.getElementById('cnt').innerHTML = `<b>${shown.length}</b> Gehölze`;
@@ -587,156 +433,237 @@ function renderAll(trees) {
 function renderFiltered(trees) {
   markerLayer.clearLayers();
   trees.forEach(tree => {
-    const m=L.marker([tree.lat,tree.lng], { icon:mkIcon(tree.id) });
-    m.on('click',()=>openDropdown(tree));
+    const m = L.marker([tree.lat, tree.lng], { icon:mkIcon(tree.id) });
+    m.on('click', () => openDropdown(tree));
     markerLayer.addLayer(m);
   });
   document.getElementById('cnt').innerHTML = `<b>${trees.length}</b> Gehölze`;
 }
 
-// ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════
 // DROPDOWN POPUP
-// ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════
 function openDropdown(tree) {
-  document.querySelectorAll('.td.sel').forEach(e=>e.classList.remove('sel'));
+  // Deselect old marker
+  document.querySelectorAll('.td.sel').forEach(e => e.classList.remove('sel'));
   document.querySelector(`.td[data-id="${tree.id}"]`)?.classList.add('sel');
-  if (curPop) { map.closePopup(curPop); curPop=null; }
+
+  // Close existing popup
+  if (curPop) { map.closePopup(curPop); curPop = null; }
 
   const uid = tree.id.replace(/\W/g,'x');
-  const traits = getTraits(tree.latin);
 
-  // Build merkmale section
-  let merkmaleHTML;
-  if (traits && traits.length > 0) {
-    const tags = traits.map(m=>`<span class="dc-m-tag">${m}</span>`).join('');
-    merkmaleHTML = `<div class="dc-merkmale">
-      <div class="dc-m-label">Markante Merkmale</div>
-      <div class="dc-m-tags">${tags}</div>
-    </div>`;
-  } else {
-    merkmaleHTML = `<div class="dc-merkmale">
-      <div class="dc-m-label">Markante Merkmale</div>
-      <div class="dc-m-none">Keine Daten vorhanden</div>
-    </div>`;
-  }
+  // Build the dropdown card HTML
+  const cardHTML = `
+    <div class="dropdown-card" id="dc-${uid}">
 
-  const cardHTML = `<div class="dc">
-    <div class="dc-inner">
+      <!-- HEADER -->
       <div class="dc-head">
         <div class="dc-src">${tree.quelle}</div>
-        <div class="dc-lat">${tree.latin||'—'}</div>
-        ${tree.de&&tree.de!=='—'?`<div class="dc-de">${tree.de}</div>`:''}
-        <button class="dc-close" id="cl-${uid}">✕</button>
+        <div class="dc-latin">${tree.latin || '—'}</div>
+        ${tree.de && tree.de !== '—' ? `<div class="dc-de">${tree.de}</div>` : ''}
+        <button class="dc-close" id="close-${uid}">✕</button>
       </div>
-      <div class="dc-photo-wrap" id="pw-${uid}">
-        <div class="spinner"></div>
+
+      <!-- PHOTO -->
+      <div class="dc-photo-wrap">
+        <div class="dc-photo-loading" id="ph-${uid}">
+          <div class="spinner"></div>
+          <span>Foto wird geladen…</span>
+        </div>
       </div>
-      ${merkmaleHTML}
+
+      <!-- DATA GRID -->
+      <div class="dc-grid">
+        <div class="dc-cell">
+          <div class="dc-label">Typ</div>
+          <div class="dc-val">${tree.typ}</div>
+        </div>
+        <div class="dc-cell">
+          <div class="dc-label">Stammumfang</div>
+          <div class="dc-val">${tree.stammumfang}</div>
+        </div>
+        <div class="dc-cell">
+          <div class="dc-label">Baumhöhe</div>
+          <div class="dc-val">${tree.baumhoehe}</div>
+        </div>
+        <div class="dc-cell">
+          <div class="dc-label">Kronendurchm.</div>
+          <div class="dc-val">${tree.krone}</div>
+        </div>
+        <div class="dc-cell">
+          <div class="dc-label">Pflanzjahr</div>
+          <div class="dc-val">${tree.pflanzjahr}</div>
+        </div>
+        <div class="dc-cell">
+          <div class="dc-label">Standort</div>
+          <div class="dc-val" style="font-size:10px">${tree.strasse !== '—' ? tree.strasse : '—'}</div>
+        </div>
+      </div>
+
+      <!-- FOOTER -->
       <div class="dc-foot">
         <span class="dc-coord">${tree.lat.toFixed(5)}° N &nbsp;${tree.lng.toFixed(5)}° E</span>
-        <span id="wl-${uid}"></span>
+        <span id="wikilink-${uid}"></span>
       </div>
-    </div>
-  </div>`;
 
-  const pop = L.popup({ offset:L.point(0,-14), closeButton:false, autoPan:true, autoPanPadding:[20,20] })
-    .setContent(cardHTML).setLatLng([tree.lat,tree.lng]);
-  pop.on('remove',()=>{ document.querySelectorAll('.td.sel').forEach(e=>e.classList.remove('sel')); curPop=null; });
-  pop.openOn(map); curPop=pop;
+    </div>`;
 
-  setTimeout(()=>{ document.getElementById(`cl-${uid}`)?.addEventListener('click',()=>map.closePopup(pop)); },30);
+  // Leaflet popup with offset so arrow points at dot
+  const pop = L.popup({
+    offset: L.point(0, -14),
+    closeButton: false,
+    autoPan: true,
+    autoPanPadding: [20, 20],
+    className: 'tree-popup',
+  })
+  .setContent(cardHTML)
+  .setLatLng([tree.lat, tree.lng]);
 
-  // Async photo
+  pop.on('remove', () => {
+    document.querySelectorAll('.td.sel').forEach(e => e.classList.remove('sel'));
+    curPop = null;
+  });
+
+  pop.openOn(map);
+  curPop = pop;
+
+  // Wire up close button after DOM insert
+  setTimeout(() => {
+    document.getElementById(`close-${uid}`)?.addEventListener('click', () => {
+      map.closePopup(pop);
+    });
+  }, 30);
+
+  // Async: load iNaturalist photo
   fetchINat(tree.latin).then(d => {
-    const pw = document.getElementById(`pw-${uid}`);
-    if (!pw) return;
+    const ph = document.getElementById(`ph-${uid}`);
+    if (!ph) return;
     if (d?.photo) {
-      pw.innerHTML = `<img class="dc-photo" src="${d.photo}" alt="${tree.latin}"/><span class="dc-photo-src">© iNaturalist</span>`;
+      ph.outerHTML = `
+        <img class="dc-photo" src="${d.photo}" alt="${tree.latin}"/>
+        <span class="dc-photo-src">© iNaturalist / CC</span>`;
     } else {
-      pw.innerHTML = `<span class="dc-nophoto">Kein Foto verfügbar</span>`;
+      ph.innerHTML = '<span style="font-size:9px;color:var(--stone)">Kein Foto verfügbar</span>';
     }
+    // Add wiki link if available
     if (d?.wiki) {
-      const wl=document.getElementById(`wl-${uid}`);
-      if (wl) wl.innerHTML=`<a class="dc-wiki" href="${d.wiki}" target="_blank">→ Wikipedia</a>`;
+      const wl = document.getElementById(`wikilink-${uid}`);
+      if (wl) wl.innerHTML = `<a class="dc-wiki" href="${d.wiki}" target="_blank" rel="noreferrer">→ Wikipedia</a>`;
     }
   });
 }
 
-// ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════
 // SEARCH
-// ════════════════════════════════════════════════════════════
-const si=document.getElementById('si'), sdrop=document.getElementById('sdrop');
-si.addEventListener('input',()=>{
-  const q=si.value.trim().toLowerCase();
-  if (q.length>0) renderFiltered(allTrees.filter(t=>(t.latin||'').toLowerCase().includes(q)||(t.de||'').toLowerCase().includes(q)));
-  else renderAll(allTrees);
-  if (q.length<2){sdrop.style.display='none';return}
-  const seen=new Set();
-  const hits=allTrees.filter(t=>{
-    const ok=((t.latin||'').toLowerCase().includes(q)||(t.de||'').toLowerCase().includes(q))&&!seen.has(t.latin);
-    if(ok)seen.add(t.latin);return ok;
+// ════════════════════════════════════════════════
+const si    = document.getElementById('si');
+const sdrop = document.getElementById('sdrop');
+
+si.addEventListener('input', () => {
+  const q = si.value.trim().toLowerCase();
+  if (q.length > 0) {
+    renderFiltered(allTrees.filter(t =>
+      (t.latin||'').toLowerCase().includes(q) || (t.de||'').toLowerCase().includes(q)));
+  } else {
+    renderAll(allTrees);
+  }
+
+  if (q.length < 2) { sdrop.style.display='none'; return; }
+
+  const seen = new Set();
+  const hits = allTrees.filter(t => {
+    const match = (t.latin||'').toLowerCase().includes(q) || (t.de||'').toLowerCase().includes(q);
+    if (!match || seen.has(t.latin)) return false;
+    seen.add(t.latin); return true;
   }).slice(0,9);
-  if(!hits.length){sdrop.style.display='none';return}
-  sdrop.innerHTML=hits.map(t=>`<div class="sdi" data-id="${t.id}">
-    <div class="sdi-l">${t.latin}</div>
-    ${t.de&&t.de!=='—'?`<div class="sdi-d">${t.de}</div>`:''}
-  </div>`).join('');
-  sdrop.style.display='block';
-  sdrop.querySelectorAll('.sdi').forEach(el=>{
-    el.addEventListener('click',()=>{
-      const tree=allTrees.find(t=>t.id===el.dataset.id);
-      if(!tree)return;
-      map.flyTo([tree.lat,tree.lng],18,{duration:.8});
-      setTimeout(()=>openDropdown(tree),850);
-      sdrop.style.display='none'; si.value=tree.latin; renderAll(allTrees);
+
+  if (!hits.length) { sdrop.style.display='none'; return; }
+
+  sdrop.innerHTML = hits.map(t => `
+    <div class="sdi" data-id="${t.id}">
+      <div class="sdi-l">${t.latin}</div>
+      ${t.de && t.de!=='—' ? `<div class="sdi-d">${t.de}</div>` : ''}
+    </div>`).join('');
+  sdrop.style.display = 'block';
+
+  sdrop.querySelectorAll('.sdi').forEach(el => {
+    el.addEventListener('click', () => {
+      const tree = allTrees.find(t => t.id === el.dataset.id);
+      if (!tree) return;
+      map.flyTo([tree.lat, tree.lng], 18, { duration:0.8 });
+      setTimeout(() => openDropdown(tree), 850);
+      sdrop.style.display = 'none';
+      si.value = tree.latin;
+      renderAll(allTrees);
     });
   });
 });
-document.addEventListener('click',e=>{if(!e.target.closest('#sbox'))sdrop.style.display='none';});
 
-document.querySelectorAll('.fb').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    document.querySelectorAll('.fb').forEach(b=>b.classList.remove('on'));
-    btn.classList.add('on'); activeFilter=btn.dataset.f;
-    si.value=''; sdrop.style.display='none';
-    if(curPop){map.closePopup(curPop);curPop=null;}
+document.addEventListener('click', e => {
+  if (!e.target.closest('#sbox')) sdrop.style.display = 'none';
+});
+
+// ════════════════════════════════════════════════
+// FILTER BUTTONS
+// ════════════════════════════════════════════════
+document.querySelectorAll('.fb').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.fb').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    activeFilter = btn.dataset.f;
+    si.value = ''; sdrop.style.display = 'none';
+    if (curPop) { map.closePopup(curPop); curPop = null; }
     renderAll(allTrees);
   });
 });
 
-// ════════════════════════════════════════════════════════════
-// INIT
-// ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════
+// INIT — try WFS first, fall back to Overpass
+// ════════════════════════════════════════════════
 async function init() {
-  setBar(10,'Karte wird geladen…');
-  await new Promise(r=>setTimeout(r,200));
+  bar(10, 'Karte wird geladen…');
+  await new Promise(r => setTimeout(r, 200));
 
-  let trees=[], src='';
+  let trees = [], src = '';
 
-  setBar(25,'Baumkataster Wien wird abgerufen…');
+  // ① WFS (richeste Daten: Stammumfang, Höhe, Pflanzjahr…)
+  bar(25, 'Baumkataster Wien wird abgerufen…');
   try {
-    trees=await loadWFS();
-    if(trees.length>0){ src=`Baumkataster Wien · ${trees.length} Bäume`; console.log('✓ WFS:',trees.length); }
-  } catch(e){ console.warn('WFS:',e.message); }
-
-  if(trees.length===0){
-    setBar(50,'OpenStreetMap Overpass wird geladen…');
-    try {
-      trees=await loadOverpass();
-      src=`OpenStreetMap · ${trees.length} Bäume`;
-      console.log('✓ Overpass:',trees.length);
-    } catch(e2){ console.error('Beide Quellen fehlgeschlagen:',e2); src='Verbindungsfehler'; }
+    trees = await loadWFS();
+    if (trees.length > 0) {
+      src = `Baumkataster Wien · ${trees.length} Bäume`;
+      console.log('✓ WFS OK:', trees.length, 'Bäume');
+    }
+  } catch(e) {
+    console.warn('WFS fehlgeschlagen:', e.message);
   }
 
-  setBar(85,'Bäume werden eingezeichnet…');
-  await new Promise(r=>setTimeout(r,80));
-  allTrees=trees;
+  // ② Overpass fallback
+  if (trees.length === 0) {
+    bar(50, 'OpenStreetMap Overpass wird geladen…');
+    try {
+      trees = await loadOverpass();
+      src = `OpenStreetMap · ${trees.length} Bäume`;
+      console.log('✓ Overpass OK:', trees.length, 'Bäume');
+    } catch(e2) {
+      console.error('Beide Quellen fehlgeschlagen:', e2);
+      src = 'Verbindungsfehler – bitte Seite neu laden';
+    }
+  }
+
+  bar(85, 'Bäume werden eingezeichnet…');
+  await new Promise(r => setTimeout(r, 80));
+
+  allTrees = trees;
   renderAll(allTrees);
-  document.getElementById('stxt').textContent=src;
-  setBar(100,'Fertig!');
-  await new Promise(r=>setTimeout(r,350));
-  document.getElementById('loader').style.display='none';
+  document.getElementById('stxt').textContent = src;
+
+  bar(100, 'Fertig!');
+  await new Promise(r => setTimeout(r, 350));
+  document.getElementById('loader').style.display = 'none';
 }
+
 init();
 </script>
 </body>
