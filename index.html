@@ -563,16 +563,45 @@ async function loadWFS() {
   const r = await fetch(url);
   if (!r.ok) throw new Error('WFS '+r.status);
   const j = await r.json();
+
+  // Helper: case-insensitive property lookup
+  const getProp = (obj, ...names) => {
+    if (!obj) return null;
+    const keys = Object.keys(obj);
+    for (const name of names) {
+      // exact match first
+      if (obj[name] != null) return obj[name];
+      // case-insensitive match
+      const k = keys.find(key => key.toLowerCase() === name.toLowerCase());
+      if (k && obj[k] != null) return obj[k];
+    }
+    return null;
+  };
+
+  // Debug: log first feature properties so we can see what's actually there
+  if (j.features && j.features[0]) {
+    console.log('Baumkataster property keys:', Object.keys(j.features[0].properties));
+    console.log('First feature:', j.features[0].properties);
+  }
+
   return (j.features||[]).map((f,i) => {
     const p=f.properties, c=f.geometry.coordinates;
-    const a=parseArt(p.GATTUNG_ART||'');
-    // BAUMNUMMER field may be capitalized or lowercase in JSON output
-    const baumnr = p.BAUMNUMMER ?? p.baumnummer ?? p.Baumnummer
-                ?? p.BAUM_ID ?? p.baum_id ?? '—';
-    return { id:'w'+(p.BAUM_ID||p.baum_id||i), lat:c[1], lng:c[0],
+    const a=parseArt(getProp(p,'GATTUNG_ART')||'');
+
+    // Try BAUMNUMMER first (the user-facing tag on the tree),
+    // then BAUM_ID (the internal database ID — also shown in Stadt Wien viewer)
+    const baumnr = getProp(p,'BAUMNUMMER','baumnummer');
+    const baumid = getProp(p,'BAUM_ID','baum_id','OBJECTID');
+
+    // Show BAUMNUMMER if present, else BAUM_ID, else fallback
+    const displayNr = baumnr ?? baumid ?? '—';
+
+    return { id:'w'+(baumid||i), lat:c[1], lng:c[0],
       latin:a.latin, de:a.de, typ:classTyp(a.latin),
-      baumnummer: String(baumnr),
-      strasse:p.OBJEKT_STRASSE||p.objekt_strasse||'—', quelle:'Baumkataster Wien' };
+      baumnummer: String(displayNr),
+      baum_id: String(baumid||'—'),
+      strasse: getProp(p,'OBJEKT_STRASSE')||'—',
+      quelle:'Baumkataster Wien' };
   });
 }
 
@@ -598,21 +627,95 @@ async function loadOverpass() {
 }
 
 // ════════════════════════════════════════════════════════════
-// iNaturalist
+// PHOTO FETCH — multi-source fallback chain
+// 1. iNaturalist (best quality, scientifically curated)
+// 2. Wikipedia API (article main image)
+// 3. Wikimedia Commons (search by species name)
 // ════════════════════════════════════════════════════════════
 const iCache = new Map();
+
 async function fetchINat(name) {
   if (iCache.has(name)) return iCache.get(name);
-  try {
-    const r = await fetch(`https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(name)}&rank=species&per_page=1`);
-    const d = await r.json();
-    if (d.results?.[0]) {
-      const t=d.results[0];
-      const res = { photo:t.default_photo?.medium_url||null, wiki:t.wikipedia_url||null };
-      iCache.set(name,res); return res;
+
+  let result = null;
+
+  // Try multiple search variants for better hit rate
+  const searchVariants = [
+    name,                                // exact: "Acer platanoides 'Globosum'"
+    name.replace(/'[^']+'/g, '').trim(), // strip cultivar: "Acer platanoides"
+    name.split(' ').slice(0, 2).join(' '),// genus + species only
+    name.split(' ')[0],                  // genus only
+  ].filter((v, i, arr) => v && arr.indexOf(v) === i);
+
+  // ── Source 1: iNaturalist ──
+  for (const variant of searchVariants) {
+    try {
+      const r = await fetch(`https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(variant)}&rank=species,genus&per_page=1`);
+      const d = await r.json();
+      if (d.results?.[0]?.default_photo?.medium_url) {
+        const t = d.results[0];
+        result = {
+          photo: t.default_photo.medium_url,
+          wiki: t.wikipedia_url || null,
+          source: 'iNaturalist',
+        };
+        break;
+      }
+    } catch(e) {}
+  }
+
+  // ── Source 2: Wikipedia main image ──
+  if (!result) {
+    for (const variant of searchVariants) {
+      try {
+        const r = await fetch(`https://de.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(variant)}?redirect=true`);
+        const d = await r.json();
+        if (d.thumbnail?.source) {
+          result = {
+            photo: d.thumbnail.source.replace(/\/\d+px-/, '/400px-'),
+            wiki: d.content_urls?.desktop?.page || null,
+            source: 'Wikipedia',
+          };
+          break;
+        }
+      } catch(e) {}
+      // Also try English Wikipedia
+      try {
+        const r = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(variant)}?redirect=true`);
+        const d = await r.json();
+        if (d.thumbnail?.source) {
+          result = {
+            photo: d.thumbnail.source.replace(/\/\d+px-/, '/400px-'),
+            wiki: d.content_urls?.desktop?.page || null,
+            source: 'Wikipedia',
+          };
+          break;
+        }
+      } catch(e) {}
     }
-  } catch(e){}
-  iCache.set(name,null); return null;
+  }
+
+  // ── Source 3: Wikimedia Commons search ──
+  if (!result) {
+    for (const variant of searchVariants) {
+      try {
+        const r = await fetch(`https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrsearch=${encodeURIComponent(variant)}&gsrnamespace=6&gsrlimit=1&prop=imageinfo&iiprop=url&iiurlwidth=400`);
+        const d = await r.json();
+        const pages = d?.query?.pages;
+        if (pages) {
+          const firstPage = Object.values(pages)[0];
+          const url = firstPage?.imageinfo?.[0]?.thumburl || firstPage?.imageinfo?.[0]?.url;
+          if (url && /\.(jpg|jpeg|png|webp)$/i.test(url)) {
+            result = { photo: url, wiki: null, source: 'Wikimedia' };
+            break;
+          }
+        }
+      } catch(e) {}
+    }
+  }
+
+  iCache.set(name, result);
+  return result;
 }
 
 // ════════════════════════════════════════════════════════════
@@ -687,7 +790,11 @@ function openDropdown(tree) {
       </div>
       ${merkmaleHTML}
       <div class="dc-foot">
-        <span class="dc-coord">Baum-Nr. <b style="color:var(--moss);font-family:'DM Mono',monospace">${tree.baumnummer || '—'}</b></span>
+        <span class="dc-coord">
+          ${tree.baum_id && tree.baum_id !== '—'
+            ? `Baum-ID <b style="color:var(--moss);font-family:'DM Mono',monospace">${tree.baum_id}</b>`
+            : `Nr. <b style="color:var(--moss);font-family:'DM Mono',monospace">${tree.baumnummer || '—'}</b>`}
+        </span>
         <span id="wl-${uid}"></span>
       </div>
     </div>
@@ -705,7 +812,8 @@ function openDropdown(tree) {
     const pw = document.getElementById(`pw-${uid}`);
     if (!pw) return;
     if (d?.photo) {
-      pw.innerHTML = `<img class="dc-photo" src="${d.photo}" alt="${tree.latin}"/><span class="dc-photo-src">© iNaturalist</span>`;
+      const srcLabel = d.source ? `© ${d.source}` : '© Foto';
+      pw.innerHTML = `<img class="dc-photo" src="${d.photo}" alt="${tree.latin}"/><span class="dc-photo-src">${srcLabel}</span>`;
     } else {
       pw.innerHTML = `<span class="dc-nophoto">Kein Foto verfügbar</span>`;
     }
