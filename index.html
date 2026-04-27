@@ -235,31 +235,25 @@ html, body { height: 100%; background: var(--paper); color: var(--ink); font-fam
 // S: Sternwartstraße  W: Döblinger Friedhof (Ostrand = Borkowskigasse)
 // E: Cottagegasse     N: Nedergasse
 // ════════════════════════════════════════════════════════════
-// L-shaped boundary polygon matching the drawn green line.
-// Park stays fully intact — west boundary runs along Max-Emanuel-Straße
-// (outside the park), then jogs east at Hasenauerstraße toward the
-// Sternwartstraße corner, east along Cottagegasse, north on
-// Gymnasiumstraße, and back along Hartäckerstraße.
+// Boundary quadrilateral — 4 corners (DMS converted to decimal):
+// NW: 48°14'21.7"N 16°19'37.5"E
+// NE: 48°14'18.7"N 16°20'37.3"E
+// SE: 48°13'57.3"N 16°20'32.7"E
+// SW: 48°13'58.5"N 16°19'41.9"E
 const BOUNDARY_POLYGON = [
-  [48.2425, 16.3370], // NW: Hartäckerstraße / Hasenauerstraße area
-  [48.2425, 16.3525], // NE: Hartäckerstraße / Cottagegasse
-  [48.2360, 16.3525], // E side: down Cottagegasse to kink
-  [48.2360, 16.3445], // Kink inward (Gymnasiumstraße)
-  [48.2295, 16.3445], // SE: Sternwartstraße / Türkenschanzstraße
-  [48.2295, 16.3370], // S along Sternwartstraße to Hasenauerstr.
-  [48.2330, 16.3370], // W up Hasenauerstraße
-  [48.2330, 16.3320], // West jog: along Hasenauerstraße / Max-Emanuel-Str.
-  [48.2400, 16.3320], // N up Max-Emanuel-Straße (park's west edge)
-  [48.2400, 16.3370], // E jog back along Peter-Jordan-Straße / BOKU
-  [48.2425, 16.3370], // close polygon at NW
+  [48.23936, 16.32708], // NW
+  [48.23853, 16.34369], // NE
+  [48.23258, 16.34242], // SE
+  [48.23292, 16.32831], // SW
+  [48.23936, 16.32708], // close polygon back to NW
 ];
 
-// Simple bounding box for maxBounds (Leaflet needs a rectangle)
+// Bounding box for maxBounds (smallest rectangle covering all 4 corners + small margin)
 const BOUNDS = {
-  south: 48.2290,
-  north: 48.2430,
-  west:  16.3315,
-  east:  16.3530,
+  south: 48.2320,
+  north: 48.2400,
+  west:  16.3265,
+  east:  16.3445,
 };
 const L_BOUNDS = L.latLngBounds(
   L.latLng(BOUNDS.south, BOUNDS.west),
@@ -270,12 +264,12 @@ const L_BOUNDS = L.latLngBounds(
 // MAP INIT — locked to boundary
 // ════════════════════════════════════════════════════════════
 const map = L.map('map', {
-  center: [48.2338, 16.3415],
+  center: [48.2360, 16.3354],   // center of the new boundary quadrilateral
   zoom: 16,
   zoomControl: false,
-  maxBounds: L_BOUNDS,          // hard pan limit
-  maxBoundsViscosity: 1.0,      // can't drag outside
-  minZoom: 14,                  // can't zoom out past boundary
+  maxBounds: L_BOUNDS,
+  maxBoundsViscosity: 1.0,
+  minZoom: 14,
   maxZoom: 20,
 });
 L.control.zoom({ position:'bottomright' }).addTo(map);
@@ -572,10 +566,13 @@ async function loadWFS() {
   return (j.features||[]).map((f,i) => {
     const p=f.properties, c=f.geometry.coordinates;
     const a=parseArt(p.GATTUNG_ART||'');
-    return { id:'w'+(p.BAUM_ID||i), lat:c[1], lng:c[0],
+    // BAUMNUMMER field may be capitalized or lowercase in JSON output
+    const baumnr = p.BAUMNUMMER ?? p.baumnummer ?? p.Baumnummer
+                ?? p.BAUM_ID ?? p.baum_id ?? '—';
+    return { id:'w'+(p.BAUM_ID||p.baum_id||i), lat:c[1], lng:c[0],
       latin:a.latin, de:a.de, typ:classTyp(a.latin),
-      baumnummer: p.BAUMNUMMER || p.BAUM_ID || '—',
-      strasse:p.OBJEKT_STRASSE||'—', quelle:'Baumkataster Wien' };
+      baumnummer: String(baumnr),
+      strasse:p.OBJEKT_STRASSE||p.objekt_strasse||'—', quelle:'Baumkataster Wien' };
   });
 }
 
