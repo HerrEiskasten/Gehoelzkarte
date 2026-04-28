@@ -265,21 +265,21 @@ const L_BOUNDS = L.latLngBounds(
 // ════════════════════════════════════════════════════════════
 const map = L.map('map', {
   center: [48.2360, 16.3354],
-  zoom: 17,                     // start zoomed in more
+  zoom: 17,
   zoomControl: false,
   maxBounds: L_BOUNDS,
   maxBoundsViscosity: 1.0,
-  minZoom: 16,                  // can't zoom out past full boundary view
-  maxZoom: 22,                  // allow much deeper zoom for tree-level detail
-  zoomSnap: 0.5,                // smoother half-step zooming
-  zoomDelta: 0.5,               // zoom buttons step by 0.5
-  wheelPxPerZoomLevel: 80,      // smoother mouse wheel zoom
+  minZoom: 16,
+  maxZoom: 24,                  // even deeper zoom — single-tree detail
+  zoomSnap: 0.5,
+  zoomDelta: 0.5,
+  wheelPxPerZoomLevel: 80,
 });
 L.control.zoom({ position:'bottomright' }).addTo(map);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution:'© <a href="https://osm.org">OpenStreetMap</a> · Baumkataster: Stadt Wien CC BY-SA 3.0 AT',
-  maxZoom: 22,
-  maxNativeZoom: 19,           // OSM tiles only go to z19, then upscale
+  maxZoom: 24,
+  maxNativeZoom: 19,
 }).addTo(map);
 
 // Grey overlay outside the L-shaped study area
