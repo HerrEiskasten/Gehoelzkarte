@@ -264,18 +264,22 @@ const L_BOUNDS = L.latLngBounds(
 // MAP INIT — locked to boundary
 // ════════════════════════════════════════════════════════════
 const map = L.map('map', {
-  center: [48.2360, 16.3354],   // center of the new boundary quadrilateral
-  zoom: 16,
+  center: [48.2360, 16.3354],
+  zoom: 17,                     // start zoomed in more
   zoomControl: false,
   maxBounds: L_BOUNDS,
   maxBoundsViscosity: 1.0,
-  minZoom: 14,
-  maxZoom: 20,
+  minZoom: 16,                  // can't zoom out past full boundary view
+  maxZoom: 22,                  // allow much deeper zoom for tree-level detail
+  zoomSnap: 0.5,                // smoother half-step zooming
+  zoomDelta: 0.5,               // zoom buttons step by 0.5
+  wheelPxPerZoomLevel: 80,      // smoother mouse wheel zoom
 });
 L.control.zoom({ position:'bottomright' }).addTo(map);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution:'© <a href="https://osm.org">OpenStreetMap</a> · Baumkataster: Stadt Wien CC BY-SA 3.0 AT',
-  maxZoom:20,
+  maxZoom: 22,
+  maxNativeZoom: 19,           // OSM tiles only go to z19, then upscale
 }).addTo(map);
 
 // Grey overlay outside the L-shaped study area
@@ -554,14 +558,34 @@ function classTyp(latin) {
 
 // ════════════════════════════════════════════════════════════
 // DATA — WFS primary, Overpass fallback
+// CORS proxy used because data.wien.gv.at blocks browser fetches
 // ════════════════════════════════════════════════════════════
 async function loadWFS() {
   const w=BOUNDS.west, s=BOUNDS.south, e=BOUNDS.east, n=BOUNDS.north;
-  const url = `https://data.wien.gv.at/daten/geo?service=WFS&request=GetFeature`
+  const wfsUrl = `https://data.wien.gv.at/daten/geo?service=WFS&request=GetFeature`
     + `&version=1.1.0&typeName=ogdwien:BAUMKATOGD&srsName=EPSG:4326`
     + `&outputFormat=json&bbox=${w},${s},${e},${n}`;
-  const r = await fetch(url);
-  if (!r.ok) throw new Error('WFS '+r.status);
+
+  // Try direct fetch first (works on some CORS-enabled environments)
+  // Then fall back to public CORS proxies if blocked
+  const proxies = [
+    (u) => u,                                                     // direct
+    (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`,      // proxy 1
+    (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`, // proxy 2
+  ];
+
+  let r = null, lastErr = null;
+  for (const proxy of proxies) {
+    try {
+      r = await fetch(proxy(wfsUrl));
+      if (r.ok) break;
+      lastErr = new Error('WFS HTTP ' + r.status);
+    } catch(e) {
+      lastErr = e;
+    }
+  }
+  if (!r || !r.ok) throw lastErr || new Error('WFS unreachable');
+
   const j = await r.json();
 
   // Helper: case-insensitive property lookup
