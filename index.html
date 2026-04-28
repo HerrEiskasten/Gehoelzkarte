@@ -747,10 +747,10 @@ function openDropdown(tree) {
       </div>
       ${merkmaleHTML}
       <div class="dc-foot">
-        <span class="dc-coord">
-          ${tree.baum_id && tree.baum_id !== '—'
-            ? `Baum-ID <b style="color:var(--moss);font-family:'DM Mono',monospace">${tree.baum_id}</b>`
-            : `Nr. <b style="color:var(--moss);font-family:'DM Mono',monospace">${tree.baumnummer || '—'}</b>`}
+        <span class="dc-coord" style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:7px;letter-spacing:1.5px;text-transform:uppercase;color:var(--stone)">Baumnr.</span>
+          <b style="color:var(--moss);font-family:'DM Mono',monospace;font-size:13px;font-weight:500">${tree.baumnummer && tree.baumnummer !== '—' ? tree.baumnummer : (tree.baum_id !== '—' ? tree.baum_id : '?')}</b>
+          ${tree.baum_id && tree.baum_id !== '—' ? `<span style="font-size:8px;color:var(--stone)">· ID ${tree.baum_id}</span>` : ''}
         </span>
         <span id="wl-${uid}"></span>
       </div>
