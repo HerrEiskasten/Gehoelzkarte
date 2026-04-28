@@ -558,66 +558,70 @@ function classTyp(latin) {
 
 // ════════════════════════════════════════════════════════════
 // DATA — WFS primary, Overpass fallback
-// CORS proxy used because data.wien.gv.at blocks browser fetches
 // ════════════════════════════════════════════════════════════
 async function loadWFS() {
   const w=BOUNDS.west, s=BOUNDS.south, e=BOUNDS.east, n=BOUNDS.north;
-  const wfsUrl = `https://data.wien.gv.at/daten/geo?service=WFS&request=GetFeature`
+  const wfsPath = `data.wien.gv.at/daten/geo?service=WFS&request=GetFeature`
     + `&version=1.1.0&typeName=ogdwien:BAUMKATOGD&srsName=EPSG:4326`
     + `&outputFormat=json&bbox=${w},${s},${e},${n}`;
 
-  // Try direct fetch first (works on some CORS-enabled environments)
-  // Then fall back to public CORS proxies if blocked
-  const proxies = [
-    (u) => u,                                                     // direct
-    (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`,      // proxy 1
-    (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`, // proxy 2
+  // Try multiple endpoints in order — first that works wins
+  const attempts = [
+    { name: 'direct',     url: `https://${wfsPath}` },
+    { name: 'corsproxy',  url: `https://corsproxy.io/?url=${encodeURIComponent('https://' + wfsPath)}` },
+    { name: 'allorigins', url: `https://api.allorigins.win/get?url=${encodeURIComponent('https://' + wfsPath)}` },
+    { name: 'codetabs',   url: `https://api.codetabs.com/v1/proxy/?quest=https://${wfsPath}` },
+    { name: 'thingproxy', url: `https://thingproxy.freeboard.io/fetch/https://${wfsPath}` },
   ];
 
-  let r = null, lastErr = null;
-  for (const proxy of proxies) {
+  for (const att of attempts) {
     try {
-      r = await fetch(proxy(wfsUrl));
-      if (r.ok) break;
-      lastErr = new Error('WFS HTTP ' + r.status);
+      console.log(`→ WFS Versuch: ${att.name}`);
+      const r = await fetch(att.url);
+      if (!r.ok) { console.warn(`  ✗ ${att.name} HTTP ${r.status}`); continue; }
+
+      // allorigins wraps response in { contents: "..." }
+      let j;
+      if (att.name === 'allorigins') {
+        const wrapper = await r.json();
+        j = JSON.parse(wrapper.contents);
+      } else {
+        j = await r.json();
+      }
+
+      if (j.features && j.features.length > 0) {
+        console.log(`  ✓ ${att.name} OK: ${j.features.length} features`);
+        console.log('  Properties keys:', Object.keys(j.features[0].properties));
+        console.log('  First feature:', j.features[0].properties);
+        return processWFSFeatures(j.features);
+      } else {
+        console.warn(`  ✗ ${att.name}: leeres Ergebnis`);
+      }
     } catch(e) {
-      lastErr = e;
+      console.warn(`  ✗ ${att.name} Fehler:`, e.message);
     }
   }
-  if (!r || !r.ok) throw lastErr || new Error('WFS unreachable');
+  throw new Error('Alle WFS-Endpunkte fehlgeschlagen');
+}
 
-  const j = await r.json();
-
+function processWFSFeatures(features) {
   // Helper: case-insensitive property lookup
   const getProp = (obj, ...names) => {
     if (!obj) return null;
     const keys = Object.keys(obj);
     for (const name of names) {
-      // exact match first
       if (obj[name] != null) return obj[name];
-      // case-insensitive match
       const k = keys.find(key => key.toLowerCase() === name.toLowerCase());
       if (k && obj[k] != null) return obj[k];
     }
     return null;
   };
 
-  // Debug: log first feature properties so we can see what's actually there
-  if (j.features && j.features[0]) {
-    console.log('Baumkataster property keys:', Object.keys(j.features[0].properties));
-    console.log('First feature:', j.features[0].properties);
-  }
-
-  return (j.features||[]).map((f,i) => {
+  return features.map((f,i) => {
     const p=f.properties, c=f.geometry.coordinates;
     const a=parseArt(getProp(p,'GATTUNG_ART')||'');
-
-    // Try BAUMNUMMER first (the user-facing tag on the tree),
-    // then BAUM_ID (the internal database ID — also shown in Stadt Wien viewer)
     const baumnr = getProp(p,'BAUMNUMMER','baumnummer');
     const baumid = getProp(p,'BAUM_ID','baum_id','OBJECTID');
-
-    // Show BAUMNUMMER if present, else BAUM_ID, else fallback
     const displayNr = baumnr ?? baumid ?? '—';
 
     return { id:'w'+(baumid||i), lat:c[1], lng:c[0],
